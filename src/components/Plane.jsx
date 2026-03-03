@@ -248,9 +248,9 @@ export default function Plane({ onHud, parentRef }) {
         const rollScale = isOnGround ? 0.25 : 1;
         bank.current += (rollInput * MAX_BANK * rollScale - bank.current) * ROLL_RESPONSE * dt;
 
-        // Yaw from bank (more gradual, speed-dependent)
-        const yawCoupling = ROLL_YAW_COUPLING * (speed.current / 100);
-        yaw.current += bank.current * yawCoupling * dt;
+        // Yaw from bank — base coupling + speed bonus so turns work at low speed
+        const speedFactor = Math.max(0.5, speed.current / 80);
+        yaw.current += bank.current * ROLL_YAW_COUPLING * speedFactor * dt;
 
         /* ── Forward movement ────────────────────────────────────── */
         _fwd.set(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
