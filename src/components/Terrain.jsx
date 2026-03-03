@@ -47,9 +47,9 @@ const noise = makeNoise2D(999);
 
 /* ── Flat zones (airports, city center) ──────────────────────── */
 const FLAT_ZONES = [
-    { x: 0, z: 0, r: 400 },          // City center
-    { x: -450, z: -100, r: 220 },     // Airport
-    { x: 600, z: 500, r: 140 },       // Airstrip near village
+    { x: 0, z: 0, r: 420 },          // City center
+    { x: -450, z: -100, r: 350 },     // Airport — larger radius
+    { x: 600, z: 500, r: 220 },       // Airstrip
 ];
 
 function flatZoneFactor(x, z) {
@@ -57,7 +57,8 @@ function flatZoneFactor(x, z) {
     for (const zone of FLAT_ZONES) {
         const dist = Math.sqrt((x - zone.x) ** 2 + (z - zone.z) ** 2) / zone.r;
         if (dist < 1) {
-            const f = dist * dist; // quadratic ease — very flat in center
+            // Quartic ease — extremely flat in core, smooth transition at edge
+            const f = dist * dist * dist * dist;
             minFactor = Math.min(minFactor, f);
         }
     }
@@ -65,8 +66,8 @@ function flatZoneFactor(x, z) {
 }
 
 /* ── Height function ─────────────────────────────────────────── */
-const MAP_HALF = 1500; // half-size of the world
-const BOUNDARY_START = 1100; // where boundary mountains begin
+const MAP_HALF = 1500;
+const BOUNDARY_START = 1100;
 
 export function getHeight(x, z) {
     let h = 0;
@@ -76,7 +77,13 @@ export function getHeight(x, z) {
     h += noise(x * 0.005, z * 0.005) * 20;
     h += noise(x * 0.018, z * 0.018) * 6;
 
-    // Flatten near flat zones
+    // Gentle hills between city and villages
+    const midDist = Math.sqrt(x * x + z * z);
+    if (midDist > 350 && midDist < 900) {
+        h += noise(x * 0.01, z * 0.01) * 15;
+    }
+
+    // Apply flat zone AFTER all terrain features (so nothing bleeds through)
     h *= flatZoneFactor(x, z);
 
     // Boundary mountains (ring around the edge)
@@ -84,20 +91,12 @@ export function getHeight(x, z) {
     if (edgeDist > BOUNDARY_START) {
         const t = (edgeDist - BOUNDARY_START) / (MAP_HALF - BOUNDARY_START);
         const clampedT = Math.min(1, t);
-        // Gradual mountain rise at the edges
         const boundaryH = clampedT * clampedT * 180;
-        // Add some noise variation so the boundary mountains look natural
         const bnoise = noise(x * 0.008, z * 0.008) * 40 * clampedT;
         h += boundaryH + bnoise;
     }
 
-    // Gentle hills between city and villages
-    const midDist = Math.sqrt(x * x + z * z);
-    if (midDist > 350 && midDist < 900) {
-        h += noise(x * 0.01, z * 0.01) * 15;
-    }
-
-    return Math.max(-3, h);
+    return Math.max(-1, h);
 }
 
 /* ── Sky Dome ────────────────────────────────────────────────── */

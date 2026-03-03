@@ -31,64 +31,136 @@ const _fwd = new THREE.Vector3();
 function AirplaneMesh() {
     return (
         <group>
-            {/* Fuselage */}
-            <mesh castShadow>
-                <boxGeometry args={[1.2, 0.8, 5]} />
-                <meshStandardMaterial color="#c0c8d0" metalness={0.3} roughness={0.5} />
+            {/* Fuselage — rounded cylinder */}
+            <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.55, 0.55, 5.5, 8]} />
+                <meshStandardMaterial color="#c8ccd4" metalness={0.35} roughness={0.45} />
             </mesh>
 
-            {/* Cockpit */}
-            <mesh position={[0, 0.5, -1.5]} castShadow>
-                <boxGeometry args={[0.8, 0.5, 1.2]} />
-                <meshStandardMaterial color="#2080d0" metalness={0.5} roughness={0.3} transparent opacity={0.8} />
+            {/* Nose cone — tapered */}
+            <mesh position={[0, 0, -3.2]} castShadow rotation={[Math.PI / 2, 0, 0]}>
+                <coneGeometry args={[0.55, 1.5, 8]} />
+                <meshStandardMaterial color="#b8c0cc" metalness={0.4} roughness={0.4} />
             </mesh>
 
-            {/* Wings */}
-            <mesh position={[0, 0, 0]} castShadow>
-                <boxGeometry args={[10, 0.15, 1.8]} />
-                <meshStandardMaterial color="#d0d8e0" metalness={0.2} roughness={0.6} />
+            {/* Cockpit windshield */}
+            <mesh position={[0, 0.35, -2.0]} castShadow>
+                <boxGeometry args={[0.7, 0.35, 1.0]} />
+                <meshStandardMaterial color="#2080c8" metalness={0.6} roughness={0.2} transparent opacity={0.75} />
             </mesh>
 
-            {/* Wing tips (red) */}
-            <mesh position={[-5.2, 0, 0]}>
-                <boxGeometry args={[0.5, 0.15, 1.6]} />
-                <meshStandardMaterial color="#e04040" />
+            {/* Main wings — swept back, tapered */}
+            <mesh position={[0, -0.05, 0.2]} castShadow>
+                <boxGeometry args={[12, 0.1, 2.0]} />
+                <meshStandardMaterial color="#d0d4dc" metalness={0.25} roughness={0.55} />
             </mesh>
-            <mesh position={[5.2, 0, 0]}>
-                <boxGeometry args={[0.5, 0.15, 1.6]} />
-                <meshStandardMaterial color="#40e040" />
+            {/* Wing tips — tapered outer sections */}
+            <mesh position={[-6.3, -0.02, 0.4]} castShadow>
+                <boxGeometry args={[1, 0.08, 1.4]} />
+                <meshStandardMaterial color="#d0d4dc" metalness={0.25} roughness={0.55} />
             </mesh>
-
-            {/* Tail vertical stabilizer */}
-            <mesh position={[0, 1, 2.3]} castShadow>
-                <boxGeometry args={[0.15, 2, 1.2]} />
-                <meshStandardMaterial color="#c0c8d0" metalness={0.2} roughness={0.6} />
-            </mesh>
-
-            {/* Tail horizontal stabilizer */}
-            <mesh position={[0, 0.3, 2.3]} castShadow>
-                <boxGeometry args={[4, 0.12, 0.8]} />
-                <meshStandardMaterial color="#d0d8e0" metalness={0.2} roughness={0.6} />
+            <mesh position={[6.3, -0.02, 0.4]} castShadow>
+                <boxGeometry args={[1, 0.08, 1.4]} />
+                <meshStandardMaterial color="#d0d4dc" metalness={0.25} roughness={0.55} />
             </mesh>
 
-            {/* Engine nacelles */}
-            <mesh position={[-2.5, -0.3, -0.5]} castShadow>
-                <cylinderGeometry args={[0.35, 0.35, 1.5, 8]} />
-                <meshStandardMaterial color="#505860" metalness={0.5} roughness={0.4} />
+            {/* Wing tip nav lights */}
+            <mesh position={[-6.9, 0, 0.4]}>
+                <sphereGeometry args={[0.12, 6, 6]} />
+                <meshStandardMaterial color="#ff2020" emissive="#ff2020" emissiveIntensity={0.8} />
             </mesh>
-            <mesh position={[2.5, -0.3, -0.5]} castShadow>
-                <cylinderGeometry args={[0.35, 0.35, 1.5, 8]} />
-                <meshStandardMaterial color="#505860" metalness={0.5} roughness={0.4} />
+            <mesh position={[6.9, 0, 0.4]}>
+                <sphereGeometry args={[0.12, 6, 6]} />
+                <meshStandardMaterial color="#20ff20" emissive="#20ff20" emissiveIntensity={0.8} />
             </mesh>
 
-            {/* Propeller discs (decorative) */}
-            <mesh position={[-2.5, -0.3, -1.35]} rotation={[Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[0.5, 16]} />
-                <meshStandardMaterial color="#303840" transparent opacity={0.5} side={THREE.DoubleSide} />
+            {/* Underwing flaps */}
+            <mesh position={[-2.5, -0.15, 0.9]} castShadow>
+                <boxGeometry args={[3, 0.06, 0.5]} />
+                <meshStandardMaterial color="#a8b0b8" roughness={0.6} />
             </mesh>
-            <mesh position={[2.5, -0.3, -1.35]} rotation={[Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[0.5, 16]} />
-                <meshStandardMaterial color="#303840" transparent opacity={0.5} side={THREE.DoubleSide} />
+            <mesh position={[2.5, -0.15, 0.9]} castShadow>
+                <boxGeometry args={[3, 0.06, 0.5]} />
+                <meshStandardMaterial color="#a8b0b8" roughness={0.6} />
+            </mesh>
+
+            {/* Vertical stabilizer (tail fin) */}
+            <mesh position={[0, 1.1, 2.5]} castShadow>
+                <boxGeometry args={[0.1, 2.2, 1.4]} />
+                <meshStandardMaterial color="#c8ccd4" metalness={0.25} roughness={0.55} />
+            </mesh>
+            {/* Rudder accent */}
+            <mesh position={[0, 1.5, 2.9]}>
+                <boxGeometry args={[0.12, 1.2, 0.4]} />
+                <meshStandardMaterial color="#d04040" roughness={0.5} />
+            </mesh>
+
+            {/* Horizontal stabilizers */}
+            <mesh position={[0, 0.2, 2.5]} castShadow>
+                <boxGeometry args={[4.5, 0.08, 0.9]} />
+                <meshStandardMaterial color="#d0d4dc" metalness={0.25} roughness={0.55} />
+            </mesh>
+
+            {/* Engine pods — turbofan style */}
+            {[-2.8, 2.8].map((xOff, i) => (
+                <group key={`eng-${i}`} position={[xOff, -0.45, 0]}>
+                    {/* Nacelle body */}
+                    <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+                        <cylinderGeometry args={[0.38, 0.32, 1.8, 8]} />
+                        <meshStandardMaterial color="#505860" metalness={0.5} roughness={0.35} />
+                    </mesh>
+                    {/* Intake ring */}
+                    <mesh position={[0, 0, -0.95]} rotation={[Math.PI / 2, 0, 0]}>
+                        <torusGeometry args={[0.35, 0.05, 6, 12]} />
+                        <meshStandardMaterial color="#404850" metalness={0.6} roughness={0.3} />
+                    </mesh>
+                    {/* Fan face */}
+                    <mesh position={[0, 0, -0.9]} rotation={[0, 0, 0]}>
+                        <circleGeometry args={[0.32, 8]} />
+                        <meshStandardMaterial color="#303840" metalness={0.4} roughness={0.5} />
+                    </mesh>
+                    {/* Pylon (connects engine to wing) */}
+                    <mesh position={[0, 0.25, 0]}>
+                        <boxGeometry args={[0.08, 0.4, 1.0]} />
+                        <meshStandardMaterial color="#b0b8c0" roughness={0.5} />
+                    </mesh>
+                </group>
+            ))}
+
+            {/* Landing gear — nose */}
+            <mesh position={[0, -0.7, -1.8]}>
+                <cylinderGeometry args={[0.04, 0.04, 0.5, 4]} />
+                <meshStandardMaterial color="#606060" />
+            </mesh>
+            <mesh position={[0, -0.95, -1.8]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.12, 0.12, 0.15, 8]} />
+                <meshStandardMaterial color="#303030" roughness={0.9} />
+            </mesh>
+
+            {/* Landing gear — main (under wings) */}
+            {[-1.5, 1.5].map((xOff, i) => (
+                <group key={`gear-${i}`}>
+                    <mesh position={[xOff, -0.65, 0.3]}>
+                        <cylinderGeometry args={[0.04, 0.04, 0.6, 4]} />
+                        <meshStandardMaterial color="#606060" />
+                    </mesh>
+                    <mesh position={[xOff, -0.95, 0.3]} rotation={[0, 0, Math.PI / 2]}>
+                        <cylinderGeometry args={[0.15, 0.15, 0.18, 8]} />
+                        <meshStandardMaterial color="#303030" roughness={0.9} />
+                    </mesh>
+                </group>
+            ))}
+
+            {/* Belly panel stripe */}
+            <mesh position={[0, -0.55, 0]} rotation={[0, 0, 0]}>
+                <boxGeometry args={[1.0, 0.02, 4.5]} />
+                <meshStandardMaterial color="#a0a8b0" roughness={0.6} />
+            </mesh>
+
+            {/* Tail strobe light */}
+            <mesh position={[0, 0, 2.9]}>
+                <sphereGeometry args={[0.08, 4, 4]} />
+                <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={1.0} />
             </mesh>
         </group>
     );
@@ -184,13 +256,21 @@ export default function Plane({ onHud, parentRef }) {
         _fwd.set(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
         pos.current.addScaledVector(_fwd, speed.current * dt);
 
-        /* ── Altitude (much gentler now) ─────────────────────────── */
+        /* ── Altitude — gravity + lift + pitch ────────────────────── */
         if (!isOnGround) {
-            // Climb/descent from pitch — reduced multiplier (0.006 instead of 0.015)
+            // Constant gravity pull
+            const CONST_GRAVITY = 8;
+            pos.current.y -= CONST_GRAVITY * dt;
+
+            // Lift from speed — counteracts gravity
+            const liftFactor = Math.min(1, speed.current / 80); // full lift at 80 kts
+            pos.current.y += CONST_GRAVITY * liftFactor * dt;
+
+            // Pitch-based climb/descent
             const climbRate = pitch.current * PITCH_RATE * speed.current * 0.006 * dt * 60;
             pos.current.y += climbRate;
 
-            // Stall: gentle descent when too slow
+            // Extra stall sink when very slow
             if (speed.current < STALL_SPEED) {
                 const stallFactor = 1 - (speed.current / STALL_SPEED);
                 pos.current.y -= GRAVITY * stallFactor * stallFactor * dt;

@@ -1,4 +1,4 @@
-/* ── Reset & Base ─────────────────────────────────────────────── */
+/* ── Reset ────────────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -13,7 +13,7 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #0b0d10;
+  background: #0b0d10;
 }
 
 .app {
@@ -26,118 +26,170 @@ canvas {
   display: block;
 }
 
-/* ── UI Layer ────────────────────────────────────────────────── */
-#ui-layer {
+/* ── Title mark (tiny, top-left) ─────────────────────────────── */
+#title-mark {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 12px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   pointer-events: none;
   z-index: 20;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  color: #e0e0e0;
-  font-size: 13px;
-  letter-spacing: 0.5px;
+  opacity: 0.5;
 }
 
-/* ── Common HUD Panel ────────────────────────────────────────── */
-.hud-panel {
-  position: absolute;
-  background: rgba(10, 10, 15, 0.85);
-  padding: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-  pointer-events: auto;
-}
-
-.hud-panel h3 {
-  margin: 0 0 12px 0;
-  font-size: 11px;
-  color: #88c0d0;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 5px;
-  font-weight: normal;
-}
-
-/* ── Telemetry Panel (Top Left) ──────────────────────────────── */
-#telemetry-panel {
-  top: 20px;
-  left: 20px;
-  width: 240px;
-}
-
-.hud-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  align-items: center;
-}
-
-.hud-label {
-  color: #888888;
-  font-size: 11px;
-}
-
-.hud-value {
-  font-weight: bold;
-  color: #ffffff;
-  font-size: 13px;
-}
-
-.val-num {
-  color: #ebcb8b;
+.tm-icon {
   font-size: 15px;
 }
 
-.hud-coords {
+.tm-text {
+  font-family: 'Consolas', 'Monaco', monospace;
   font-size: 11px;
-  color: #aaa;
-  font-weight: normal;
-}
-
-.hud-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 8px 0;
-}
-
-/* ── Status indicators ───────────────────────────────────────── */
-.status-flying {
-  color: #a3be8c;
-}
-
-.status-grounded {
+  letter-spacing: 3px;
   color: #88c0d0;
 }
 
-.status-flying[class*="STALL"],
-.hud-value:has(+ .status-stall) {
+/* ── Controls hint (top-right, one line) ─────────────────────── */
+#controls-hint {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+  color: rgba(200, 210, 220, 0.35);
+  pointer-events: none;
+  z-index: 20;
+  letter-spacing: 0.5px;
+}
+
+.ch-key {
+  display: inline-block;
+  padding: 0 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(220, 230, 240, 0.5);
+  font-size: 9px;
+  margin: 0 1px;
+  min-width: 12px;
+  text-align: center;
+}
+
+.ch-sep {
+  margin: 0 5px;
+  opacity: 0.3;
+}
+
+/* ── Bottom HUD Bar ──────────────────────────────────────────── */
+#hud-bar {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(8, 10, 16, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 0;
+  pointer-events: none;
+  z-index: 20;
+  font-family: 'Consolas', 'Monaco', monospace;
+  overflow: hidden;
+}
+
+/* ── Status light ────────────────────────────────────────────── */
+.hud-status {
+  padding: 10px 10px;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-align: center;
+  min-width: 40px;
+}
+
+.hud-status.flying {
+  background: rgba(100, 180, 100, 0.15);
+  color: #a3be8c;
+}
+
+.hud-status.stall {
+  background: rgba(200, 100, 80, 0.15);
   color: #bf616a;
 }
 
-/* ── Attitude Panel (Top Center-Right) ───────────────────────── */
-#attitude-panel {
-  top: 20px;
-  left: 280px;
-  width: 110px;
+.hud-status.grounded {
+  background: rgba(100, 160, 200, 0.15);
+  color: #88c0d0;
 }
 
-.ai-frame {
-  width: 80px;
-  height: 80px;
+/* ── HUD cells ───────────────────────────────────────────────── */
+.hud-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-lbl {
+  font-size: 8px;
+  color: rgba(150, 160, 170, 0.5);
+  letter-spacing: 1px;
+}
+
+.hud-val {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ebcb8b;
+  line-height: 1;
+}
+
+.hud-unit {
+  font-size: 9px;
+  color: rgba(200, 210, 220, 0.35);
+}
+
+/* ── Throttle mini-bar ───────────────────────────────────────── */
+.throttle-cell {
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+}
+
+.thr-track {
+  width: 60px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.thr-fill {
+  height: 100%;
+  background: linear-gradient(to right, #a3be8c, #ebcb8b);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+/* ── Mini attitude indicator ─────────────────────────────────── */
+.att-cell {
+  padding: 6px 10px;
+}
+
+.att-mini {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 1px solid #444;
-  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3);
   overflow: hidden;
   position: relative;
-  margin: 0 auto;
 }
 
-.ai-horizon {
+.att-horizon {
   position: absolute;
   width: 200%;
   height: 200%;
@@ -146,154 +198,45 @@ canvas {
   background: linear-gradient(to bottom,
       #3a6a9a 0%, #3a6a9a 50%,
       #6a5a30 50%, #6a5a30 100%);
-  transition: transform 0.12s ease-out;
+  transition: transform 0.1s ease-out;
 }
 
-.ai-wings {
+.att-cross {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 36px;
-  height: 2px;
+  width: 14px;
+  height: 1.5px;
   transform: translate(-50%, -50%);
   background: #ebcb8b;
 }
 
-.ai-wings::before {
+.att-cross::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -6px;
-  width: 2px;
-  height: 14px;
+  top: -4px;
+  width: 1.5px;
+  height: 10px;
   background: #ebcb8b;
   transform: translateX(-50%);
 }
 
-.ai-center-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  background: #ebcb8b;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-/* ── Throttle Bar (Left side, beside telemetry) ──────────────── */
-#throttle-bar-container {
-  position: absolute;
-  left: 275px;
-  bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  gap: 3px;
-}
-
-#throttle-label {
-  font-size: 9px;
-  color: #888;
-  letter-spacing: 1px;
-}
-
-#throttle-bar-bg {
-  width: 14px;
-  height: 150px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-  position: relative;
-  overflow: hidden;
-}
-
-#throttle-bar-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background-color: #ebcb8b;
-  transition: height 0.08s linear;
-}
-
-#throttle-val {
-  font-size: 11px;
-  color: #ebcb8b;
-  font-weight: bold;
-}
-
-/* ── Controls Panel (Bottom Left) ────────────────────────────── */
-#controls-panel {
-  bottom: 20px;
-  left: 20px;
-  width: 200px;
-}
-
-.key-row {
-  margin-bottom: 6px;
-  font-size: 11px;
-  color: #ccc;
-}
-
-.key {
-  display: inline-block;
-  padding: 1px 5px;
-  border: 1px solid #666;
-  border-radius: 3px;
-  background: #222;
-  color: #fff;
-  font-size: 10px;
-  margin-right: 4px;
-  min-width: 14px;
-  text-align: center;
-  font-family: inherit;
-}
-
-/* ── Title Bar (Top Right) ───────────────────────────────────── */
-#title-bar {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.title-icon {
-  font-size: 18px;
-  opacity: 0.6;
-}
-
-.title-text {
-  font-size: 14px;
-  letter-spacing: 4px;
-  color: #88c0d0;
-  opacity: 0.7;
-}
-
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  #telemetry-panel {
-    width: 180px;
-    font-size: 11px;
-    padding: 10px;
-  }
-
-  .val-num {
-    font-size: 13px;
-  }
-
-  #attitude-panel {
+  .att-cell {
     display: none;
   }
 
-  #throttle-bar-container {
+  .throttle-cell {
     display: none;
   }
 
-  #controls-panel {
-    display: none;
+  .hud-val {
+    font-size: 14px;
+  }
+
+  .hud-cell {
+    padding: 6px 8px;
   }
 }

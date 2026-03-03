@@ -1,97 +1,72 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import MainScene from './scenes/MainScene.jsx';
 
-/* ── Telemetry Panel (SpaceX-inspired) ───────────────────────── */
-function TelemetryPanel({ data }) {
+/* ── Bottom HUD Bar ──────────────────────────────────────────── */
+function HudBar({ data }) {
     const headingDeg = data.heading ? ((-data.heading * 180 / Math.PI) % 360 + 360) % 360 : 0;
-    const pitchDeg = data.pitch ? (data.pitch * 180 / Math.PI) : 0;
-    const bankDeg = data.bank ? (data.bank * 180 / Math.PI) : 0;
+    const pct = ((data.speed) / 200) * 100;
 
     return (
-        <div id="telemetry-panel" className="hud-panel">
-            <h3>TELEMETRY</h3>
-            <div className="hud-row">
-                <span className="hud-label">ALTITUDE</span>
-                <span className="hud-value"><span className="val-num">{data.altitude}</span> m</span>
-            </div>
-            <div className="hud-row">
-                <span className="hud-label">SPEED</span>
-                <span className="hud-value"><span className="val-num">{data.speed}</span> kts</span>
-            </div>
-            <div className="hud-row">
-                <span className="hud-label">HEADING</span>
-                <span className="hud-value"><span className="val-num">{headingDeg.toFixed(0)}</span>°</span>
+        <div id="hud-bar">
+            {/* Status light */}
+            <div className={`hud-status ${data.grounded ? 'grounded' : data.speed < 30 ? 'stall' : 'flying'}`}>
+                {data.grounded ? 'GND' : data.speed < 30 ? 'STALL' : 'FLY'}
             </div>
 
-            <div className="hud-divider" />
-
-            <div className="hud-row">
-                <span className="hud-label">PITCH</span>
-                <span className="hud-value">{pitchDeg.toFixed(1)}°</span>
-            </div>
-            <div className="hud-row">
-                <span className="hud-label">BANK</span>
-                <span className="hud-value">{bankDeg.toFixed(1)}°</span>
+            {/* Speed */}
+            <div className="hud-cell">
+                <span className="hud-lbl">SPD</span>
+                <span className="hud-val">{data.speed}</span>
+                <span className="hud-unit">kts</span>
             </div>
 
-            <div className="hud-divider" />
-
-            <div className="hud-row">
-                <span className="hud-label">POSITION</span>
-                <span className="hud-value hud-coords">{data.x}, {data.z}</span>
+            {/* Throttle mini-bar */}
+            <div className="hud-cell throttle-cell">
+                <span className="hud-lbl">THR</span>
+                <div className="thr-track">
+                    <div className="thr-fill" style={{ width: `${pct}%` }} />
+                </div>
             </div>
 
-            <div className="hud-row">
-                <span className="hud-label">STATUS</span>
-                <span className={`hud-value ${data.grounded ? 'status-grounded' : 'status-flying'}`}>
-                    {data.grounded ? 'GROUNDED' : data.speed < 25 ? 'STALL' : 'FLYING'}
-                </span>
+            {/* Altitude */}
+            <div className="hud-cell">
+                <span className="hud-lbl">ALT</span>
+                <span className="hud-val">{data.altitude}</span>
+                <span className="hud-unit">m</span>
+            </div>
+
+            {/* Heading */}
+            <div className="hud-cell">
+                <span className="hud-lbl">HDG</span>
+                <span className="hud-val">{headingDeg.toFixed(0)}</span>
+                <span className="hud-unit">°</span>
+            </div>
+
+            {/* Mini attitude */}
+            <div className="hud-cell att-cell">
+                <div className="att-mini">
+                    <div
+                        className="att-horizon"
+                        style={{
+                            transform: `rotate(${-(data.bank || 0) * (180 / Math.PI)}deg) translateY(${(data.pitch || 0) * 30}px)`,
+                        }}
+                    />
+                    <div className="att-cross" />
+                </div>
             </div>
         </div>
     );
 }
 
-/* ── Throttle Bar ────────────────────────────────────────────── */
-function ThrottleBar({ speed, min, max }) {
-    const pct = ((speed - min) / (max - min)) * 100;
+/* ── Controls hint (tiny, top-right corner) ──────────────────── */
+function ControlsHint() {
     return (
-        <div id="throttle-bar-container">
-            <div id="throttle-label">THR</div>
-            <div id="throttle-bar-bg">
-                <div id="throttle-bar-fill" style={{ height: `${pct}%` }} />
-            </div>
-            <div id="throttle-val">{speed}</div>
-        </div>
-    );
-}
-
-/* ── Attitude Indicator ──────────────────────────────────────── */
-function AttitudeIndicator({ pitch, bank }) {
-    return (
-        <div id="attitude-panel" className="hud-panel">
-            <h3>ATTITUDE</h3>
-            <div className="ai-frame">
-                <div
-                    className="ai-horizon"
-                    style={{
-                        transform: `rotate(${-(bank || 0) * (180 / Math.PI)}deg) translateY(${(pitch || 0) * 50}px)`,
-                    }}
-                />
-                <div className="ai-wings" />
-                <div className="ai-center-dot" />
-            </div>
-        </div>
-    );
-}
-
-/* ── Controls Legend ─────────────────────────────────────────── */
-function ControlsPanel() {
-    return (
-        <div id="controls-panel" className="hud-panel">
-            <h3>FLIGHT CONTROLS</h3>
-            <div className="key-row"><span className="key">W</span> <span className="key">S</span> THROTTLE</div>
-            <div className="key-row"><span className="key">↑</span> <span className="key">↓</span> PITCH</div>
-            <div className="key-row"><span className="key">←</span> <span className="key">→</span> ROLL</div>
+        <div id="controls-hint">
+            <span className="ch-key">W</span><span className="ch-key">S</span> Throttle
+            <span className="ch-sep">|</span>
+            <span className="ch-key">↑</span><span className="ch-key">↓</span> Pitch
+            <span className="ch-sep">|</span>
+            <span className="ch-key">←</span><span className="ch-key">→</span> Roll
         </div>
     );
 }
@@ -114,18 +89,14 @@ export default function App() {
         <div className="app" ref={appRef} tabIndex={-1} style={{ outline: 'none' }}>
             <MainScene onHud={handleHud} />
 
-            <div id="ui-layer">
-                <TelemetryPanel data={hudData} />
-                <AttitudeIndicator pitch={hudData.pitch} bank={hudData.bank} />
-                <ThrottleBar speed={hudData.speed} min={0} max={200} />
-                <ControlsPanel />
-
-                {/* Title */}
-                <div id="title-bar">
-                    <span className="title-icon">✈</span>
-                    <span className="title-text">SKYPORT</span>
-                </div>
+            {/* Title — tiny, top-left */}
+            <div id="title-mark">
+                <span className="tm-icon">✈</span>
+                <span className="tm-text">SKYPORT</span>
             </div>
+
+            <ControlsHint />
+            <HudBar data={hudData} />
         </div>
     );
 }
