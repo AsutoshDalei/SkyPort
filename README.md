@@ -24,10 +24,20 @@ npm run dev
 
 | Key | Action |
 |-----|--------|
-| `W` | Throttle up |
-| `S` | Throttle down / brake (on ground) |
-| `↑` `↓` | Pitch up / down |
-| `←` `→` | Roll (induces yaw turn) |
+| `W` | Pitch up (nose up) |
+| `S` | Pitch down (nose down) |
+| `A` | Roll left |
+| `D` | Roll right |
+| `↑` | Throttle up |
+| `↓` | Throttle down / brake (on ground) |
+
+## Rules
+
+- **Land only on runways** — the airport runway or the village airstrip
+- Landing anywhere else = **crash** → 2 second crash screen → respawn at airport
+- Hitting a building = **crash** → respawn
+- HUD shows **RWY** when you're over a runway
+- You spawn at the airport runway facing the takeoff direction
 
 ## What's Inside
 

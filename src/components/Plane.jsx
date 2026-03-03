@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { getHeight } from './Terrain.jsx';
+import { getHeight, isOnRunway, SPAWN_POINT } from './Terrain.jsx';
 
 /* ── Constants ───────────────────────────────────────────────── */
 const DEFAULT_SPEED = 60;
@@ -173,17 +173,31 @@ export default function Plane({ onHud, parentRef }) {
     const keys = useRef({});
 
     // Flight state
-    const yaw = useRef(0);
+    const yaw = useRef(SPAWN_POINT.yaw);
     const pitch = useRef(0);
     const bank = useRef(0);
     const speed = useRef(DEFAULT_SPEED);
-    const pos = useRef(new THREE.Vector3(0, 100, 300));
+    const pos = useRef(new THREE.Vector3(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z));
 
-    // Keyboard input — attach to window, prevent default for arrow keys
+    // Crash state
+    const crashed = useRef(false);
+    const crashTimer = useRef(0);
+    const CRASH_DURATION = 2.0; // seconds of crash screen before respawn
+
+    function respawn() {
+        pos.current.set(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z);
+        yaw.current = SPAWN_POINT.yaw;
+        pitch.current = 0;
+        bank.current = 0;
+        speed.current = DEFAULT_SPEED;
+        crashed.current = false;
+        crashTimer.current = 0;
+    }
+
+    // Keyboard input
     useEffect(() => {
         const down = (e) => {
             keys.current[e.code] = true;
-            // Prevent arrow keys from scrolling the page
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
             }
@@ -199,22 +213,40 @@ export default function Plane({ onHud, parentRef }) {
 
     // HUD update throttle
     const hudTimer = useRef(0);
-    const onGround = useRef(false);
 
     useFrame((_, delta) => {
         const dt = Math.min(delta, 0.05);
         const k = keys.current;
 
-        // Get ground height at current position
+        /* ── Crash state — wait then respawn ────────────────────── */
+        if (crashed.current) {
+            crashTimer.current += dt;
+            if (crashTimer.current >= CRASH_DURATION) {
+                respawn();
+            }
+            // Update HUD with crash state
+            hudTimer.current += dt;
+            if (hudTimer.current > 0.1 && onHud) {
+                hudTimer.current = 0;
+                onHud({
+                    speed: 0, altitude: 0,
+                    x: Math.round(pos.current.x), z: Math.round(pos.current.z),
+                    heading: yaw.current, pitch: 0, bank: 0,
+                    grounded: true, crashed: true,
+                });
+            }
+            return; // Skip physics while crashed
+        }
+
+        // Ground height
         const groundH = getHeight(pos.current.x, pos.current.z) + GROUND_CLEARANCE;
         const isOnGround = pos.current.y <= groundH + 0.5;
-        onGround.current = isOnGround;
 
-        /* ── Throttle ────────────────────────────────────────────── */
-        if (k['KeyW']) {
+        /* ── Throttle (Arrow Up / Down) ──────────────────────────── */
+        if (k['ArrowUp']) {
             speed.current = Math.min(MAX_SPEED, speed.current + THROTTLE_ACCEL * dt);
         }
-        if (k['KeyS']) {
+        if (k['ArrowDown']) {
             if (isOnGround) {
                 speed.current = Math.max(0, speed.current - GROUND_BRAKE * dt);
             } else {
@@ -222,33 +254,32 @@ export default function Plane({ onHud, parentRef }) {
             }
         }
 
-        // Natural air drag (always slows slightly without throttle)
-        if (!isOnGround && !k['KeyW']) {
+        // Air drag
+        if (!isOnGround && !k['ArrowUp']) {
             speed.current = Math.max(0, speed.current - AIR_DRAG * dt);
         }
 
         // Ground friction
-        if (isOnGround && !k['KeyW']) {
+        if (isOnGround && !k['ArrowUp']) {
             speed.current = Math.max(0, speed.current - GROUND_FRICTION * dt);
         }
 
-        /* ── Pitch (smooth, gradual) ─────────────────────────────── */
+        /* ── Pitch (W / S) ───────────────────────────────────────── */
         let pitchInput = 0;
         if (!isOnGround || speed.current > STALL_SPEED) {
-            if (k['ArrowUp']) pitchInput = 1;
-            if (k['ArrowDown']) pitchInput = -1;
+            if (k['KeyW']) pitchInput = 1;
+            if (k['KeyS']) pitchInput = -1;
         }
         pitch.current += (pitchInput * MAX_PITCH - pitch.current) * PITCH_RESPONSE * dt;
 
-        /* ── Roll → yaw (smoother coupling) ──────────────────────── */
+        /* ── Roll → yaw (A / D) ──────────────────────────────────── */
         let rollInput = 0;
-        if (k['ArrowLeft']) rollInput = 1;
-        if (k['ArrowRight']) rollInput = -1;
+        if (k['KeyA']) rollInput = 1;
+        if (k['KeyD']) rollInput = -1;
 
         const rollScale = isOnGround ? 0.25 : 1;
         bank.current += (rollInput * MAX_BANK * rollScale - bank.current) * ROLL_RESPONSE * dt;
 
-        // Yaw from bank — base coupling + speed bonus so turns work at low speed
         const speedFactor = Math.max(0.5, speed.current / 80);
         yaw.current += bank.current * ROLL_YAW_COUPLING * speedFactor * dt;
 
@@ -258,32 +289,66 @@ export default function Plane({ onHud, parentRef }) {
 
         /* ── Altitude — gravity + lift + pitch ────────────────────── */
         if (!isOnGround) {
-            // Constant gravity pull
             const CONST_GRAVITY = 8;
             pos.current.y -= CONST_GRAVITY * dt;
 
-            // Lift from speed — counteracts gravity
-            const liftFactor = Math.min(1, speed.current / 80); // full lift at 80 kts
+            const liftFactor = Math.min(1, speed.current / 80);
             pos.current.y += CONST_GRAVITY * liftFactor * dt;
 
-            // Pitch-based climb/descent
             const climbRate = pitch.current * PITCH_RATE * speed.current * 0.006 * dt * 60;
             pos.current.y += climbRate;
 
-            // Extra stall sink when very slow
             if (speed.current < STALL_SPEED) {
                 const stallFactor = 1 - (speed.current / STALL_SPEED);
                 pos.current.y -= GRAVITY * stallFactor * stallFactor * dt;
             }
         }
 
-        // Terrain following — snap to ground
+        /* ── Ground contact — crash or land ──────────────────────── */
         if (pos.current.y < groundH) {
             pos.current.y = groundH;
-            if (pitch.current < 0) pitch.current *= 0.85;
+
+            // Check if we're on a runway
+            const runway = isOnRunway(pos.current.x, pos.current.z);
+            if (runway) {
+                // Safe landing on runway
+                if (pitch.current < 0) pitch.current *= 0.85;
+            } else {
+                // CRASH — not on a runway
+                crashed.current = true;
+                crashTimer.current = 0;
+                speed.current = 0;
+                return;
+            }
         }
 
+        // Clamp max altitude
         pos.current.y = Math.min(MAX_ALT, pos.current.y);
+
+        /* ── Building collision ───────────────────────────────────── */
+        // Simple check: if in city area and below building height
+        const cityDist = Math.sqrt(pos.current.x ** 2 + pos.current.z ** 2);
+        if (cityDist < 350 && pos.current.y < 60) {
+            // Near city center and low altitude — check building collision
+            const bx = Math.round(pos.current.x / 70);
+            const bz = Math.round(pos.current.z / 70);
+            const blockDist = Math.sqrt(bx * bx + bz * bz);
+            if (blockDist < 5) {
+                // Approximate: in a city block, with some height remaining
+                const localX = Math.abs(pos.current.x - bx * 70);
+                const localZ = Math.abs(pos.current.z - bz * 70);
+                if (localX < 20 && localZ < 20) {
+                    // Likely hitting a building
+                    const buildingH = blockDist < 2 ? 80 : blockDist < 3 ? 50 : 30;
+                    if (pos.current.y < buildingH) {
+                        crashed.current = true;
+                        crashTimer.current = 0;
+                        speed.current = 0;
+                        return;
+                    }
+                }
+            }
+        }
 
         /* ── Apply to mesh ─────────────────────────────────────── */
         if (groupRef.current) {
@@ -295,6 +360,7 @@ export default function Plane({ onHud, parentRef }) {
         hudTimer.current += dt;
         if (hudTimer.current > 0.1 && onHud) {
             hudTimer.current = 0;
+            const runway = isOnRunway(pos.current.x, pos.current.z);
             onHud({
                 speed: Math.round(speed.current),
                 altitude: Math.round(pos.current.y - getHeight(pos.current.x, pos.current.z)),
@@ -304,16 +370,16 @@ export default function Plane({ onHud, parentRef }) {
                 pitch: pitch.current,
                 bank: bank.current,
                 grounded: isOnGround && speed.current < 2,
+                crashed: false,
+                onRunway: !!runway,
             });
         }
     });
 
     return (
-        <group ref={groupRef} position={[0, 100, 300]}>
+        <group ref={groupRef} position={[SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z]}>
             <AirplaneMesh />
-            {/* point light on plane for night visibility */}
             <pointLight color="#ffffff" intensity={2} distance={30} position={[0, 1, -3]} />
-            {/* Navigation lights */}
             <pointLight color="#ff0000" intensity={1} distance={15} position={[-5, 0, 0]} />
             <pointLight color="#00ff00" intensity={1} distance={15} position={[5, 0, 0]} />
         </group>

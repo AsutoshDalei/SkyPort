@@ -222,6 +222,71 @@ canvas {
   transform: translateX(-50%);
 }
 
+/* ── Crash overlay ───────────────────────────────────────────── */
+#crash-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: rgba(120, 20, 15, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.crash-text {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 56px;
+  font-weight: bold;
+  color: #ff4040;
+  letter-spacing: 12px;
+  text-shadow: 0 0 30px rgba(255, 60, 40, 0.6);
+  animation: crash-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.crash-sub {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: rgba(255, 200, 180, 0.7);
+  margin-top: 10px;
+  letter-spacing: 2px;
+}
+
+@keyframes crash-pulse {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+/* ── Crashed status in HUD ───────────────────────────────────── */
+.hud-status.crashed {
+  background: rgba(220, 50, 40, 0.25);
+  color: #ff4040;
+}
+
+/* ── Runway tag ──────────────────────────────────────────────── */
+.runway-cell {
+  padding: 8px 6px;
+}
+
+.runway-tag {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #a3be8c;
+  background: rgba(100, 180, 100, 0.12);
+  padding: 2px 5px;
+  border-radius: 2px;
+  border: 1px solid rgba(100, 180, 100, 0.25);
+}
+
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .att-cell {
@@ -238,5 +303,9 @@ canvas {
 
   .hud-cell {
     padding: 6px 8px;
+  }
+
+  .crash-text {
+    font-size: 36px;
   }
 }

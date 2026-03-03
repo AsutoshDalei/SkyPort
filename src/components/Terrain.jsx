@@ -45,6 +45,34 @@ function makeNoise2D(seed) {
 
 const noise = makeNoise2D(999);
 
+/* ── Landing zones (runways where safe landing is allowed) ──── */
+// Each zone: center position + half-extents along the runway's local axes
+// Airport at (-450, -100) rotation 0.15 — runway 350×32
+// Airstrip at (600, 500) rotation -0.3 — strip 200×16
+export const LANDING_ZONES = [
+    { cx: -450, cz: -100, halfLen: 180, halfWid: 20, rotation: 0.15, label: 'Airport' },
+    { cx: 600, cz: 500, halfLen: 105, halfWid: 12, rotation: -0.3, label: 'Airstrip' },
+];
+
+export function isOnRunway(x, z) {
+    for (const zone of LANDING_ZONES) {
+        // Rotate point into runway's local space
+        const dx = x - zone.cx;
+        const dz = z - zone.cz;
+        const cos = Math.cos(-zone.rotation);
+        const sin = Math.sin(-zone.rotation);
+        const localX = dx * cos - dz * sin;
+        const localZ = dx * sin + dz * cos;
+        if (Math.abs(localX) < zone.halfLen && Math.abs(localZ) < zone.halfWid) {
+            return zone.label;
+        }
+    }
+    return null;
+}
+
+/* ── Spawn point (airport runway start) ──────────────────────── */
+export const SPAWN_POINT = { x: -450 + 140 * Math.cos(0.15), y: 50, z: -100 - 140 * Math.sin(0.15), yaw: -0.15 };
+
 /* ── Flat zones (airports, city center) ──────────────────────── */
 const FLAT_ZONES = [
     { x: 0, z: 0, r: 420 },          // City center

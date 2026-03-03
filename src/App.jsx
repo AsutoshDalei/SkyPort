@@ -6,21 +6,23 @@ function HudBar({ data }) {
     const headingDeg = data.heading ? ((-data.heading * 180 / Math.PI) % 360 + 360) % 360 : 0;
     const pct = ((data.speed) / 200) * 100;
 
+    // Status text and class
+    let statusText = 'FLY';
+    let statusClass = 'flying';
+    if (data.crashed) { statusText = 'CRASH'; statusClass = 'crashed'; }
+    else if (data.grounded) { statusText = 'GND'; statusClass = 'grounded'; }
+    else if (data.speed < 30) { statusText = 'STALL'; statusClass = 'stall'; }
+
     return (
         <div id="hud-bar">
-            {/* Status light */}
-            <div className={`hud-status ${data.grounded ? 'grounded' : data.speed < 30 ? 'stall' : 'flying'}`}>
-                {data.grounded ? 'GND' : data.speed < 30 ? 'STALL' : 'FLY'}
-            </div>
+            <div className={`hud-status ${statusClass}`}>{statusText}</div>
 
-            {/* Speed */}
             <div className="hud-cell">
                 <span className="hud-lbl">SPD</span>
                 <span className="hud-val">{data.speed}</span>
                 <span className="hud-unit">kts</span>
             </div>
 
-            {/* Throttle mini-bar */}
             <div className="hud-cell throttle-cell">
                 <span className="hud-lbl">THR</span>
                 <div className="thr-track">
@@ -28,21 +30,24 @@ function HudBar({ data }) {
                 </div>
             </div>
 
-            {/* Altitude */}
             <div className="hud-cell">
                 <span className="hud-lbl">ALT</span>
                 <span className="hud-val">{data.altitude}</span>
                 <span className="hud-unit">m</span>
             </div>
 
-            {/* Heading */}
             <div className="hud-cell">
                 <span className="hud-lbl">HDG</span>
                 <span className="hud-val">{headingDeg.toFixed(0)}</span>
                 <span className="hud-unit">°</span>
             </div>
 
-            {/* Mini attitude */}
+            {data.onRunway && (
+                <div className="hud-cell runway-cell">
+                    <span className="runway-tag">RWY</span>
+                </div>
+            )}
+
             <div className="hud-cell att-cell">
                 <div className="att-mini">
                     <div
@@ -58,15 +63,26 @@ function HudBar({ data }) {
     );
 }
 
-/* ── Controls hint (tiny, top-right corner) ──────────────────── */
+/* ── Crash Overlay ───────────────────────────────────────────── */
+function CrashOverlay({ visible }) {
+    if (!visible) return null;
+    return (
+        <div id="crash-overlay">
+            <div className="crash-text">CRASH</div>
+            <div className="crash-sub">Respawning at airport...</div>
+        </div>
+    );
+}
+
+/* ── Controls hint ───────────────────────────────────────────── */
 function ControlsHint() {
     return (
         <div id="controls-hint">
-            <span className="ch-key">W</span><span className="ch-key">S</span> Throttle
+            <span className="ch-key">W</span><span className="ch-key">S</span> Pitch
             <span className="ch-sep">|</span>
-            <span className="ch-key">↑</span><span className="ch-key">↓</span> Pitch
+            <span className="ch-key">A</span><span className="ch-key">D</span> Roll
             <span className="ch-sep">|</span>
-            <span className="ch-key">←</span><span className="ch-key">→</span> Roll
+            <span className="ch-key">↑</span><span className="ch-key">↓</span> Throttle
         </div>
     );
 }
@@ -76,7 +92,8 @@ export default function App() {
     const appRef = useRef();
     const [hudData, setHudData] = useState({
         speed: 60, altitude: 100, x: 0, z: 300,
-        heading: 0, pitch: 0, bank: 0, grounded: false,
+        heading: 0, pitch: 0, bank: 0,
+        grounded: false, crashed: false, onRunway: false,
     });
 
     const handleHud = useCallback((data) => setHudData(data), []);
@@ -89,7 +106,8 @@ export default function App() {
         <div className="app" ref={appRef} tabIndex={-1} style={{ outline: 'none' }}>
             <MainScene onHud={handleHud} />
 
-            {/* Title — tiny, top-left */}
+            <CrashOverlay visible={hudData.crashed} />
+
             <div id="title-mark">
                 <span className="tm-icon">✈</span>
                 <span className="tm-text">SKYPORT</span>
