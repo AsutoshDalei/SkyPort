@@ -172,24 +172,26 @@ export default function Plane({ onHud, parentRef }) {
     const groupRef = parentRef || internalRef;
     const keys = useRef({});
 
-    // Flight state
+    // Flight state — spawn on the runway surface
+    const spawnGroundY = getHeight(SPAWN_POINT.x, SPAWN_POINT.z) + GROUND_CLEARANCE;
     const yaw = useRef(SPAWN_POINT.yaw);
     const pitch = useRef(0);
     const bank = useRef(0);
-    const speed = useRef(DEFAULT_SPEED);
-    const pos = useRef(new THREE.Vector3(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z));
+    const speed = useRef(0); // Start stationary on the runway
+    const pos = useRef(new THREE.Vector3(SPAWN_POINT.x, spawnGroundY, SPAWN_POINT.z));
 
     // Crash state
     const crashed = useRef(false);
     const crashTimer = useRef(0);
-    const CRASH_DURATION = 2.0; // seconds of crash screen before respawn
+    const CRASH_DURATION = 2.0;
 
     function respawn() {
-        pos.current.set(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z);
+        const groundY = getHeight(SPAWN_POINT.x, SPAWN_POINT.z) + GROUND_CLEARANCE;
+        pos.current.set(SPAWN_POINT.x, groundY, SPAWN_POINT.z);
         yaw.current = SPAWN_POINT.yaw;
         pitch.current = 0;
         bank.current = 0;
-        speed.current = DEFAULT_SPEED;
+        speed.current = 0; // Start stationary
         crashed.current = false;
         crashTimer.current = 0;
     }

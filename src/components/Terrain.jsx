@@ -46,17 +46,15 @@ function makeNoise2D(seed) {
 const noise = makeNoise2D(999);
 
 /* ── Landing zones (runways where safe landing is allowed) ──── */
-// Each zone: center position + half-extents along the runway's local axes
-// Airport at (-450, -100) rotation 0.15 — runway 350×32
+// Airport at (-700, -300) rotation 0.15 — runway 250×28
 // Airstrip at (600, 500) rotation -0.3 — strip 200×16
 export const LANDING_ZONES = [
-    { cx: -450, cz: -100, halfLen: 180, halfWid: 20, rotation: 0.15, label: 'Airport' },
+    { cx: -700, cz: -300, halfLen: 130, halfWid: 18, rotation: 0.15, label: 'Airport' },
     { cx: 600, cz: 500, halfLen: 105, halfWid: 12, rotation: -0.3, label: 'Airstrip' },
 ];
 
 export function isOnRunway(x, z) {
     for (const zone of LANDING_ZONES) {
-        // Rotate point into runway's local space
         const dx = x - zone.cx;
         const dz = z - zone.cz;
         const cos = Math.cos(-zone.rotation);
@@ -70,13 +68,16 @@ export function isOnRunway(x, z) {
     return null;
 }
 
-/* ── Spawn point (airport runway start) ──────────────────────── */
-export const SPAWN_POINT = { x: -450 + 140 * Math.cos(0.15), y: 50, z: -100 - 140 * Math.sin(0.15), yaw: -0.15 };
+/* ── Spawn point (airport runway, ON THE GROUND) ─────────────── */
+// Position at one end of the airport runway, facing takeoff direction
+const _spawnX = -700 + 100 * Math.cos(0.15);
+const _spawnZ = -300 - 100 * Math.sin(0.15);
+export const SPAWN_POINT = { x: _spawnX, y: 0, z: _spawnZ, yaw: -0.15, needsGroundSnap: true };
 
 /* ── Flat zones (airports, city center) ──────────────────────── */
 const FLAT_ZONES = [
     { x: 0, z: 0, r: 420 },          // City center
-    { x: -450, z: -100, r: 350 },     // Airport — larger radius
+    { x: -700, z: -300, r: 300 },     // Airport (moved further from city)
     { x: 600, z: 500, r: 220 },       // Airstrip
 ];
 
@@ -450,8 +451,8 @@ function Trees() {
             // Skip flat zones
             const cityDist = Math.sqrt(x * x + z * z);
             if (cityDist < 320) continue;
-            const ap1 = Math.sqrt((x + 450) ** 2 + (z + 100) ** 2);
-            if (ap1 < 240) continue;
+            const ap1 = Math.sqrt((x + 700) ** 2 + (z + 300) ** 2);
+            if (ap1 < 280) continue;
             const ap2 = Math.sqrt((x - 600) ** 2 + (z - 500) ** 2);
             if (ap2 < 160) continue;
             const edgeDist = Math.max(Math.abs(x), Math.abs(z));
@@ -524,7 +525,7 @@ function Roads() {
             arr.push({ pos: [i * 70, 0.4, 0], rot: Math.PI / 2, len: 650, w: 9 });
         }
         // Road to airport
-        arr.push({ pos: [-225, 0.4, -50], rot: Math.atan2(-100, -450) + Math.PI / 2, len: 280, w: 7 });
+        arr.push({ pos: [-350, 0.4, -150], rot: Math.atan2(-300, -700) + Math.PI / 2, len: 500, w: 7 });
         // Road to eastern village (toward airstrip)
         arr.push({ pos: [300, 0.4, 250], rot: Math.atan2(500, 600), len: 400, w: 5 });
         return arr;
@@ -548,7 +549,7 @@ function Roads() {
     );
 }
 
-/* ── Airport (full, near city) ───────────────────────────────── */
+/* ── Airport (smaller, away from city) ────────────────────────── */
 function Airport({ position, rotation = 0 }) {
     const baseH = getHeight(position[0], position[2]);
 
@@ -556,93 +557,93 @@ function Airport({ position, rotation = 0 }) {
         <group position={[position[0], baseH + 0.1, position[2]]} rotation={[0, rotation, 0]}>
             {/* Main runway */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[350, 32]} />
+                <planeGeometry args={[250, 28]} />
                 <meshStandardMaterial color="#2a2a2e" roughness={0.85} />
             </mesh>
             {/* Center line */}
             <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[330, 1]} />
+                <planeGeometry args={[230, 0.8]} />
                 <meshStandardMaterial color="#e0e0e0" roughness={0.8} />
             </mesh>
             {/* Threshold markings */}
-            {[-160, 160].map((xOff, i) => (
+            {[-115, 115].map((xOff, i) => (
                 <group key={`th-${i}`}>
-                    {Array.from({ length: 6 }, (_, j) => (
-                        <mesh key={j} position={[xOff, 0.05, -8 + j * 3.2]} rotation={[-Math.PI / 2, 0, 0]}>
-                            <planeGeometry args={[8, 1.2]} />
+                    {Array.from({ length: 5 }, (_, j) => (
+                        <mesh key={j} position={[xOff, 0.05, -6 + j * 3]} rotation={[-Math.PI / 2, 0, 0]}>
+                            <planeGeometry args={[6, 1]} />
                             <meshStandardMaterial color="#e0e0e0" roughness={0.8} />
                         </mesh>
                     ))}
                 </group>
             ))}
             {/* Taxiway */}
-            <mesh position={[0, 0.03, 28]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[220, 14]} />
+            <mesh position={[0, 0.03, 22]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                <planeGeometry args={[160, 12]} />
                 <meshStandardMaterial color="#383838" roughness={0.9} />
             </mesh>
-            <mesh position={[0, 0.08, 28]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[220, 0.4]} />
+            <mesh position={[0, 0.08, 22]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[160, 0.35]} />
                 <meshStandardMaterial color="#d0b020" roughness={0.8} />
             </mesh>
             {/* Terminal */}
-            <mesh position={[0, 12, 55]} castShadow receiveShadow>
-                <boxGeometry args={[90, 24, 35]} />
+            <mesh position={[0, 10, 44]} castShadow receiveShadow>
+                <boxGeometry args={[60, 20, 28]} />
                 <meshStandardMaterial color="#b8b8c0" roughness={0.6} metalness={0.1} />
             </mesh>
-            <mesh position={[0, 14, 37.1]}>
-                <planeGeometry args={[80, 12]} />
+            <mesh position={[0, 12, 30]}>
+                <planeGeometry args={[52, 10]} />
                 <meshStandardMaterial color="#80b8e0" emissive="#80b8e0" emissiveIntensity={0.08} roughness={0.2} metalness={0.5} />
             </mesh>
-            <mesh position={[0, 24.5, 55]}>
-                <boxGeometry args={[94, 1, 39]} />
+            <mesh position={[0, 20.5, 44]}>
+                <boxGeometry args={[64, 1, 32]} />
                 <meshStandardMaterial color="#606068" roughness={0.5} />
             </mesh>
             {/* Hangars */}
-            {[-65, 65].map((xOff, i) => (
-                <group key={`h-${i}`} position={[xOff, 0, 60]}>
-                    <mesh position={[0, 9, 0]} castShadow receiveShadow>
-                        <boxGeometry args={[32, 18, 26]} />
+            {[-50, 50].map((xOff, i) => (
+                <group key={`h-${i}`} position={[xOff, 0, 50]}>
+                    <mesh position={[0, 7, 0]} castShadow receiveShadow>
+                        <boxGeometry args={[24, 14, 20]} />
                         <meshStandardMaterial color="#808890" roughness={0.7} />
                     </mesh>
-                    <mesh position={[0, 7, -13.1]}>
-                        <planeGeometry args={[26, 14]} />
+                    <mesh position={[0, 5.5, -10.1]}>
+                        <planeGeometry args={[20, 11]} />
                         <meshStandardMaterial color="#504830" roughness={0.9} />
                     </mesh>
                 </group>
             ))}
             {/* Control tower */}
-            <mesh position={[55, 16, 45]} castShadow>
-                <cylinderGeometry args={[3, 4, 32, 8]} />
+            <mesh position={[42, 13, 38]} castShadow>
+                <cylinderGeometry args={[2.5, 3.5, 26, 8]} />
                 <meshStandardMaterial color="#a0a0a0" roughness={0.6} />
             </mesh>
-            <mesh position={[55, 34, 45]} castShadow>
-                <cylinderGeometry args={[5, 4, 5, 8]} />
+            <mesh position={[42, 28, 38]} castShadow>
+                <cylinderGeometry args={[4, 3.5, 4, 8]} />
                 <meshStandardMaterial color="#70a8d0" roughness={0.3} metalness={0.4} transparent opacity={0.8} />
             </mesh>
-            <mesh position={[55, 37, 45]}>
-                <cylinderGeometry args={[5.5, 5.5, 1, 8]} />
+            <mesh position={[42, 30.5, 38]}>
+                <cylinderGeometry args={[4.5, 4.5, 0.8, 8]} />
                 <meshStandardMaterial color="#606060" roughness={0.5} />
             </mesh>
             {/* Runway lights */}
-            {Array.from({ length: 22 }, (_, i) => {
-                const xP = -168 + i * 16;
+            {Array.from({ length: 16 }, (_, i) => {
+                const xP = -120 + i * 16;
                 return (
                     <group key={`rl-${i}`}>
-                        <mesh position={[xP, 0.4, 16.5]}>
-                            <sphereGeometry args={[0.25, 4, 4]} />
+                        <mesh position={[xP, 0.4, 14.5]}>
+                            <sphereGeometry args={[0.2, 4, 4]} />
                             <meshStandardMaterial color="#80e080" emissive="#80e080" emissiveIntensity={0.5} />
                         </mesh>
-                        <mesh position={[xP, 0.4, -16.5]}>
-                            <sphereGeometry args={[0.25, 4, 4]} />
+                        <mesh position={[xP, 0.4, -14.5]}>
+                            <sphereGeometry args={[0.2, 4, 4]} />
                             <meshStandardMaterial color="#80e080" emissive="#80e080" emissiveIntensity={0.5} />
                         </mesh>
                     </group>
                 );
             })}
             {/* Approach lights */}
-            {Array.from({ length: 8 }, (_, i) => (
-                <mesh key={`ap-${i}`} position={[-175 - i * 10, 0.6, 0]}>
-                    <sphereGeometry args={[0.35, 4, 4]} />
+            {Array.from({ length: 6 }, (_, i) => (
+                <mesh key={`ap-${i}`} position={[-130 - i * 10, 0.5, 0]}>
+                    <sphereGeometry args={[0.3, 4, 4]} />
                     <meshStandardMaterial color="#f0f0f0" emissive="#f0f0f0" emissiveIntensity={0.5} />
                 </mesh>
             ))}
@@ -772,7 +773,7 @@ export default function Terrain() {
             <Water />
 
             {/* Airport near city */}
-            <Airport position={[-450, 0, -100]} rotation={0.15} />
+            <Airport position={[-700, 0, -300]} rotation={0.15} />
 
             {/* Airstrip near eastern village */}
             <Airstrip position={[600, 0, 500]} rotation={-0.3} />
