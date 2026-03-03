@@ -13,9 +13,7 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0a0a0f;
-  font-family: 'Inter', system-ui, sans-serif;
-  color: #e0e8f0;
+  background-color: #0b0d10;
 }
 
 .app {
@@ -28,387 +26,274 @@ canvas {
   display: block;
 }
 
-/* ── HUD Container ───────────────────────────────────────────── */
-.hud {
+/* ── UI Layer ────────────────────────────────────────────────── */
+#ui-layer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 10;
+  z-index: 20;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  color: #e0e0e0;
+  font-size: 13px;
+  letter-spacing: 0.5px;
 }
 
-/* ── Top bar: speed / compass / altitude ─────────────────────── */
-.hud-top-bar {
+/* ── Common HUD Panel ────────────────────────────────────────── */
+.hud-panel {
   position: absolute;
+  background: rgba(10, 10, 15, 0.85);
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.hud-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 11px;
+  color: #88c0d0;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 5px;
+  font-weight: normal;
+}
+
+/* ── Telemetry Panel (Top Left) ──────────────────────────────── */
+#telemetry-panel {
   top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 20px;
+  width: 240px;
+}
+
+.hud-row {
   display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
   align-items: center;
-  gap: 20px;
 }
 
-.hud-metric {
-  background: rgba(6, 10, 20, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(80, 140, 220, 0.2);
-  border-radius: 10px;
-  padding: 10px 18px;
-  text-align: center;
-  min-width: 90px;
+.hud-label {
+  color: #888888;
+  font-size: 11px;
 }
 
-.hud-metric-label {
-  font-family: 'Orbitron', monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 3px;
-  color: rgba(120, 180, 255, 0.5);
-  margin-bottom: 3px;
+.hud-value {
+  font-weight: bold;
+  color: #ffffff;
+  font-size: 13px;
 }
 
-.hud-metric-value {
-  font-family: 'Orbitron', monospace;
-  font-size: 26px;
-  font-weight: 700;
-  color: #a8d8ff;
-  text-shadow: 0 0 14px rgba(80, 160, 255, 0.4);
-  line-height: 1;
+.val-num {
+  color: #ebcb8b;
+  font-size: 15px;
 }
 
-.hud-metric-unit {
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(140, 200, 255, 0.45);
-  margin-left: 3px;
+.hud-coords {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: normal;
 }
 
-/* ── Compass ─────────────────────────────────────────────────── */
-.compass {
-  position: relative;
-  width: 70px;
-  height: 70px;
+.hud-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 8px 0;
 }
 
-.compass-ring {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: 2px solid rgba(80, 140, 220, 0.35);
-  background: rgba(6, 10, 20, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  position: relative;
-  overflow: hidden;
+/* ── Status indicators ───────────────────────────────────────── */
+.status-flying {
+  color: #a3be8c;
 }
 
-.compass-face {
-  position: absolute;
-  inset: 0;
-  transition: transform 0.15s ease-out;
+.status-grounded {
+  color: #88c0d0;
 }
 
-.compass-n,
-.compass-e,
-.compass-s,
-.compass-w {
-  position: absolute;
-  font-family: 'Orbitron', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(140, 200, 255, 0.6);
+.status-flying[class*="STALL"],
+.hud-value:has(+ .status-stall) {
+  color: #bf616a;
 }
 
-.compass-n {
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #ff6060;
-}
-
-.compass-e {
-  right: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.compass-s {
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.compass-w {
-  left: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.compass-needle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2px;
-  height: 22px;
-  transform: translate(-50%, -100%);
-  background: linear-gradient(to top, transparent, #ff5050);
-  border-radius: 1px;
-}
-
-.compass-center-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  background: #a0d0ff;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 6px rgba(100, 180, 255, 0.6);
-}
-
-/* ── Attitude Indicator (Artificial Horizon) ─────────────────── */
-.attitude-indicator {
-  position: absolute;
-  bottom: 80px;
-  left: 30px;
-}
-
-.ai-label {
-  font-family: 'Orbitron', monospace;
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 2px;
-  color: rgba(120, 180, 255, 0.4);
-  margin-bottom: 4px;
-  text-align: center;
+/* ── Attitude Panel (Top Center-Right) ───────────────────────── */
+#attitude-panel {
+  top: 20px;
+  left: 280px;
+  width: 110px;
 }
 
 .ai-frame {
-  width: 90px;
-  height: 90px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  border: 2px solid rgba(80, 140, 220, 0.3);
-  background: rgba(6, 10, 20, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #444;
+  background: rgba(0, 0, 0, 0.4);
   overflow: hidden;
   position: relative;
+  margin: 0 auto;
 }
 
-.ai-sky-ground {
+.ai-horizon {
   position: absolute;
   width: 200%;
   height: 200%;
   left: -50%;
   top: -50%;
   background: linear-gradient(to bottom,
-      #4080c0 0%, #4080c0 50%,
+      #3a6a9a 0%, #3a6a9a 50%,
       #6a5a30 50%, #6a5a30 100%);
-  transition: transform 0.1s ease-out;
+  transition: transform 0.12s ease-out;
 }
 
-.ai-crosshair {
+.ai-wings {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 40px;
+  width: 36px;
   height: 2px;
   transform: translate(-50%, -50%);
-  background: #f0c040;
-  box-shadow: 0 0 4px rgba(240, 192, 64, 0.5);
+  background: #ebcb8b;
 }
 
-.ai-crosshair::before {
+.ai-wings::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -8px;
+  top: -6px;
   width: 2px;
-  height: 18px;
-  background: #f0c040;
+  height: 14px;
+  background: #ebcb8b;
   transform: translateX(-50%);
 }
 
-.ai-bank-marks {
+.ai-center-dot {
   position: absolute;
-  inset: 0;
-  transition: transform 0.1s ease-out;
-}
-
-.ai-bank-top {
-  position: absolute;
-  top: 3px;
+  top: 50%;
   left: 50%;
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 7px solid #f0c040;
-  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: #ebcb8b;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
-/* ── Throttle Bar ────────────────────────────────────────────── */
-.throttle-bar {
+/* ── Throttle Bar (Left side, beside telemetry) ──────────────── */
+#throttle-bar-container {
   position: absolute;
-  bottom: 80px;
-  right: 30px;
+  left: 275px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  pointer-events: none;
+  gap: 3px;
 }
 
-.throttle-label {
-  font-family: 'Orbitron', monospace;
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 2px;
-  color: rgba(120, 180, 255, 0.4);
+#throttle-label {
+  font-size: 9px;
+  color: #888;
+  letter-spacing: 1px;
 }
 
-.throttle-track {
+#throttle-bar-bg {
   width: 14px;
-  height: 100px;
-  background: rgba(6, 10, 20, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(80, 140, 220, 0.25);
-  border-radius: 7px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
   position: relative;
   overflow: hidden;
 }
 
-.throttle-fill {
+#throttle-bar-fill {
   position: absolute;
   bottom: 0;
   left: 0;
-  right: 0;
-  background: linear-gradient(to top, #30a060, #60d080, #f0c040);
-  border-radius: 0 0 6px 6px;
-  transition: height 0.15s ease-out;
+  width: 100%;
+  background-color: #ebcb8b;
+  transition: height 0.08s linear;
 }
 
-.throttle-value {
-  font-family: 'Orbitron', monospace;
+#throttle-val {
   font-size: 11px;
-  font-weight: 700;
-  color: #a8d8ff;
+  color: #ebcb8b;
+  font-weight: bold;
 }
 
-/* ── Bottom bar: coordinates ─────────────────────────────────── */
-.hud-bottom-bar {
-  position: absolute;
+/* ── Controls Panel (Bottom Left) ────────────────────────────── */
+#controls-panel {
   bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(6, 10, 20, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(80, 140, 220, 0.15);
-  border-radius: 8px;
-  padding: 6px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hud-coord {
-  font-family: 'Orbitron', monospace;
-  font-size: 10px;
-  color: rgba(140, 200, 255, 0.55);
-  letter-spacing: 1px;
-}
-
-.hud-coord-sep {
-  font-size: 6px;
-  color: rgba(140, 200, 255, 0.25);
-}
-
-/* ── Controls hint ───────────────────────────────────────────── */
-.hud-controls {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  font-size: 11px;
-  line-height: 1.9;
-  color: rgba(160, 200, 240, 0.45);
-}
-
-kbd {
-  display: inline-block;
-  background: rgba(40, 60, 100, 0.3);
-  border: 1px solid rgba(80, 130, 200, 0.2);
-  border-radius: 3px;
-  padding: 0px 5px;
-  font-family: 'Orbitron', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(160, 210, 255, 0.6);
-  margin-right: 2px;
-  min-width: 16px;
-  text-align: center;
-}
-
-/* ── Title bar ───────────────────────────────────────────────── */
-.title-bar {
-  position: absolute;
-  top: 16px;
   left: 20px;
+  width: 200px;
+}
+
+.key-row {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: #ccc;
+}
+
+.key {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid #666;
+  border-radius: 3px;
+  background: #222;
+  color: #fff;
+  font-size: 10px;
+  margin-right: 4px;
+  min-width: 14px;
+  text-align: center;
+  font-family: inherit;
+}
+
+/* ── Title Bar (Top Right) ───────────────────────────────────── */
+#title-bar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   display: flex;
   align-items: center;
   gap: 8px;
-  pointer-events: none;
-  z-index: 10;
 }
 
-.title-logo {
-  font-size: 22px;
-  filter: drop-shadow(0 0 6px rgba(100, 180, 255, 0.5));
+.title-icon {
+  font-size: 18px;
+  opacity: 0.6;
 }
 
 .title-text {
-  font-family: 'Orbitron', monospace;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 5px;
-  color: rgba(160, 210, 255, 0.7);
-  text-shadow: 0 0 16px rgba(80, 160, 255, 0.3);
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: #88c0d0;
+  opacity: 0.7;
 }
 
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .hud-metric {
-    padding: 6px 10px;
-    min-width: 70px;
+  #telemetry-panel {
+    width: 180px;
+    font-size: 11px;
+    padding: 10px;
   }
 
-  .hud-metric-value {
-    font-size: 18px;
+  .val-num {
+    font-size: 13px;
   }
 
-  .compass {
-    width: 50px;
-    height: 50px;
-  }
-
-  .compass-ring {
-    width: 50px;
-    height: 50px;
-  }
-
-  .attitude-indicator {
+  #attitude-panel {
     display: none;
   }
 
-  .throttle-bar {
+  #throttle-bar-container {
     display: none;
   }
 
-  .hud-controls {
+  #controls-panel {
     display: none;
   }
 }

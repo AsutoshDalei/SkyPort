@@ -5,23 +5,24 @@ import { getHeight } from './Terrain.jsx';
 
 /* ── Constants ───────────────────────────────────────────────── */
 const DEFAULT_SPEED = 60;
-const MIN_SPEED = 0;          // Can go to 0 for landing
+const MIN_SPEED = 0;
 const MAX_SPEED = 200;
-const MIN_ALT = 0;            // Ground level
-const MAX_ALT = 500;
-const GROUND_CLEARANCE = 2;   // How high above terrain the plane sits when grounded
-const STALL_SPEED = 25;       // Below this speed, plane descends
-const GRAVITY = 30;           // Descent rate when stalled (units/s)
-const GROUND_FRICTION = 25;   // Speed deceleration on ground (units/s)
-const GROUND_BRAKE = 40;      // Braking deceleration when S pressed on ground
+const MAX_ALT = 450;
+const GROUND_CLEARANCE = 2;
+const STALL_SPEED = 30;       // Below this, plane loses lift
+const GRAVITY = 12;           // Gentle descent when stalled
+const AIR_DRAG = 4;           // Natural speed decay in air (units/s²)
+const GROUND_FRICTION = 18;   // Speed decay on ground
+const GROUND_BRAKE = 35;      // Brake with S on ground
 
-const PITCH_RATE = 1.8;
-const ROLL_RATE = 2.2;
+const PITCH_RATE = 0.8;       // Vertical climb factor (was 1.8 — much slower now)
+const PITCH_RESPONSE = 3.5;   // How fast pitch angle changes (smoothing)
+const ROLL_RESPONSE = 4.0;    // How fast bank angle changes
 
-const ROLL_YAW_COUPLING = 0.6;
-const MAX_BANK = 0.7;
-const MAX_PITCH = 0.6;
-const THROTTLE_ACCEL = 40;
+const ROLL_YAW_COUPLING = 0.4;
+const MAX_BANK = 0.55;        // Max bank angle (~31°)
+const MAX_PITCH = 0.35;       // Max pitch angle (~20°)
+const THROTTLE_ACCEL = 30;    // Slower throttle response
 
 /* ── Pre-allocated vectors ───────────────────────────────────── */
 const _fwd = new THREE.Vector3();
@@ -143,62 +144,65 @@ export default function Plane({ onHud, parentRef }) {
         }
         if (k['KeyS']) {
             if (isOnGround) {
-                // Braking on ground
                 speed.current = Math.max(0, speed.current - GROUND_BRAKE * dt);
             } else {
                 speed.current = Math.max(MIN_SPEED, speed.current - THROTTLE_ACCEL * dt);
             }
         }
 
-        // Ground friction slows plane when not accelerating
+        // Natural air drag (always slows slightly without throttle)
+        if (!isOnGround && !k['KeyW']) {
+            speed.current = Math.max(0, speed.current - AIR_DRAG * dt);
+        }
+
+        // Ground friction
         if (isOnGround && !k['KeyW']) {
             speed.current = Math.max(0, speed.current - GROUND_FRICTION * dt);
         }
 
-        /* ── Pitch ───────────────────────────────────────────────── */
+        /* ── Pitch (smooth, gradual) ─────────────────────────────── */
         let pitchInput = 0;
         if (!isOnGround || speed.current > STALL_SPEED) {
             if (k['ArrowUp']) pitchInput = 1;
             if (k['ArrowDown']) pitchInput = -1;
         }
-        pitch.current += (pitchInput * MAX_PITCH - pitch.current) * 5 * dt;
+        pitch.current += (pitchInput * MAX_PITCH - pitch.current) * PITCH_RESPONSE * dt;
 
-        /* ── Roll → yaw ──────────────────────────────────────────── */
+        /* ── Roll → yaw (smoother coupling) ──────────────────────── */
         let rollInput = 0;
         if (k['ArrowLeft']) rollInput = 1;
         if (k['ArrowRight']) rollInput = -1;
 
-        // Reduce roll effectiveness on ground
-        const rollScale = isOnGround ? 0.3 : 1;
-        bank.current += (rollInput * MAX_BANK * rollScale - bank.current) * 5 * dt;
-        yaw.current += bank.current * ROLL_YAW_COUPLING * dt;
+        const rollScale = isOnGround ? 0.25 : 1;
+        bank.current += (rollInput * MAX_BANK * rollScale - bank.current) * ROLL_RESPONSE * dt;
+
+        // Yaw from bank (more gradual, speed-dependent)
+        const yawCoupling = ROLL_YAW_COUPLING * (speed.current / 100);
+        yaw.current += bank.current * yawCoupling * dt;
 
         /* ── Forward movement ────────────────────────────────────── */
         _fwd.set(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
         pos.current.addScaledVector(_fwd, speed.current * dt);
 
-        /* ── Altitude ────────────────────────────────────────────── */
+        /* ── Altitude (much gentler now) ─────────────────────────── */
         if (!isOnGround) {
-            // Pitch-based climb/descent
-            pos.current.y += pitch.current * PITCH_RATE * speed.current * 0.015 * dt * 60;
+            // Climb/descent from pitch — reduced multiplier (0.006 instead of 0.015)
+            const climbRate = pitch.current * PITCH_RATE * speed.current * 0.006 * dt * 60;
+            pos.current.y += climbRate;
 
-            // Gravity / stall: descend if below stall speed
+            // Stall: gentle descent when too slow
             if (speed.current < STALL_SPEED) {
                 const stallFactor = 1 - (speed.current / STALL_SPEED);
-                pos.current.y -= GRAVITY * stallFactor * dt;
+                pos.current.y -= GRAVITY * stallFactor * stallFactor * dt;
             }
         }
 
-        // Snap to ground if below terrain
+        // Terrain following — snap to ground
         if (pos.current.y < groundH) {
             pos.current.y = groundH;
-            // Kill vertical velocity on landing — flatten pitch
-            if (pitch.current < 0) {
-                pitch.current *= 0.9;
-            }
+            if (pitch.current < 0) pitch.current *= 0.85;
         }
 
-        // Clamp max altitude
         pos.current.y = Math.min(MAX_ALT, pos.current.y);
 
         /* ── Apply to mesh ─────────────────────────────────────── */
