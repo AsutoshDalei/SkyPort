@@ -1,25 +1,30 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getHeight } from './Terrain.jsx';
 
 /* ── Constants ───────────────────────────────────────────────── */
 const DEFAULT_SPEED = 60;
-const MIN_SPEED = 20;
+const MIN_SPEED = 0;          // Can go to 0 for landing
 const MAX_SPEED = 200;
-const MIN_ALT = 15;
-const MAX_ALT = 600;
+const MIN_ALT = 0;            // Ground level
+const MAX_ALT = 500;
+const GROUND_CLEARANCE = 2;   // How high above terrain the plane sits when grounded
+const STALL_SPEED = 25;       // Below this speed, plane descends
+const GRAVITY = 30;           // Descent rate when stalled (units/s)
+const GROUND_FRICTION = 25;   // Speed deceleration on ground (units/s)
+const GROUND_BRAKE = 40;      // Braking deceleration when S pressed on ground
 
-const PITCH_RATE = 1.8;     // radians/s
-const ROLL_RATE = 2.2;      // radians/s
+const PITCH_RATE = 1.8;
+const ROLL_RATE = 2.2;
 
-const ROLL_YAW_COUPLING = 0.6; // roll induces yaw
-const MAX_BANK = 0.7;       // max visual bank angle
-const MAX_PITCH = 0.6;      // max visual pitch angle
-const THROTTLE_ACCEL = 40;  // speed units/s
+const ROLL_YAW_COUPLING = 0.6;
+const MAX_BANK = 0.7;
+const MAX_PITCH = 0.6;
+const THROTTLE_ACCEL = 40;
 
 /* ── Pre-allocated vectors ───────────────────────────────────── */
 const _fwd = new THREE.Vector3();
-const _up = new THREE.Vector3(0, 1, 0);
 
 /* ── Procedural Airplane Mesh ────────────────────────────────── */
 function AirplaneMesh() {
@@ -121,41 +126,80 @@ export default function Plane({ onHud, parentRef }) {
 
     // HUD update throttle
     const hudTimer = useRef(0);
+    const onGround = useRef(false);
 
     useFrame((_, delta) => {
-        const dt = Math.min(delta, 0.05); // cap delta to avoid spiral of death
+        const dt = Math.min(delta, 0.05);
         const k = keys.current;
 
-        /* ── Throttle (W / S) ──────────────────────────────────── */
-        if (k['KeyW']) speed.current = Math.min(MAX_SPEED, speed.current + THROTTLE_ACCEL * dt);
-        if (k['KeyS']) speed.current = Math.max(MIN_SPEED, speed.current - THROTTLE_ACCEL * dt);
+        // Get ground height at current position
+        const groundH = getHeight(pos.current.x, pos.current.z) + GROUND_CLEARANCE;
+        const isOnGround = pos.current.y <= groundH + 0.5;
+        onGround.current = isOnGround;
 
-        /* ── Pitch (Arrow Up / Down) ───────────────────────────── */
+        /* ── Throttle ────────────────────────────────────────────── */
+        if (k['KeyW']) {
+            speed.current = Math.min(MAX_SPEED, speed.current + THROTTLE_ACCEL * dt);
+        }
+        if (k['KeyS']) {
+            if (isOnGround) {
+                // Braking on ground
+                speed.current = Math.max(0, speed.current - GROUND_BRAKE * dt);
+            } else {
+                speed.current = Math.max(MIN_SPEED, speed.current - THROTTLE_ACCEL * dt);
+            }
+        }
+
+        // Ground friction slows plane when not accelerating
+        if (isOnGround && !k['KeyW']) {
+            speed.current = Math.max(0, speed.current - GROUND_FRICTION * dt);
+        }
+
+        /* ── Pitch ───────────────────────────────────────────────── */
         let pitchInput = 0;
-        if (k['ArrowUp']) pitchInput = 1;
-        if (k['ArrowDown']) pitchInput = -1;
+        if (!isOnGround || speed.current > STALL_SPEED) {
+            if (k['ArrowUp']) pitchInput = 1;
+            if (k['ArrowDown']) pitchInput = -1;
+        }
         pitch.current += (pitchInput * MAX_PITCH - pitch.current) * 5 * dt;
 
-        /* ── Roll (Arrow Left / Right) → coupled yaw ───────────── */
+        /* ── Roll → yaw ──────────────────────────────────────────── */
         let rollInput = 0;
         if (k['ArrowLeft']) rollInput = 1;
         if (k['ArrowRight']) rollInput = -1;
-        bank.current += (rollInput * MAX_BANK - bank.current) * 5 * dt;
 
-        // Roll induces yaw turn
+        // Reduce roll effectiveness on ground
+        const rollScale = isOnGround ? 0.3 : 1;
+        bank.current += (rollInput * MAX_BANK * rollScale - bank.current) * 5 * dt;
         yaw.current += bank.current * ROLL_YAW_COUPLING * dt;
 
-
-
-        /* ── Compute forward vector and move ───────────────────── */
+        /* ── Forward movement ────────────────────────────────────── */
         _fwd.set(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
-
-        // Altitude change from pitch
-        pos.current.y += pitch.current * PITCH_RATE * speed.current * 0.015 * dt * 60;
-        pos.current.y = Math.max(MIN_ALT, Math.min(MAX_ALT, pos.current.y));
-
-        // Forward movement
         pos.current.addScaledVector(_fwd, speed.current * dt);
+
+        /* ── Altitude ────────────────────────────────────────────── */
+        if (!isOnGround) {
+            // Pitch-based climb/descent
+            pos.current.y += pitch.current * PITCH_RATE * speed.current * 0.015 * dt * 60;
+
+            // Gravity / stall: descend if below stall speed
+            if (speed.current < STALL_SPEED) {
+                const stallFactor = 1 - (speed.current / STALL_SPEED);
+                pos.current.y -= GRAVITY * stallFactor * dt;
+            }
+        }
+
+        // Snap to ground if below terrain
+        if (pos.current.y < groundH) {
+            pos.current.y = groundH;
+            // Kill vertical velocity on landing — flatten pitch
+            if (pitch.current < 0) {
+                pitch.current *= 0.9;
+            }
+        }
+
+        // Clamp max altitude
+        pos.current.y = Math.min(MAX_ALT, pos.current.y);
 
         /* ── Apply to mesh ─────────────────────────────────────── */
         if (groupRef.current) {
@@ -163,18 +207,19 @@ export default function Plane({ onHud, parentRef }) {
             groupRef.current.rotation.set(pitch.current, yaw.current, bank.current, 'YXZ');
         }
 
-        /* ── HUD callback (throttled to ~10Hz) ─────────────────── */
+        /* ── HUD ─────────────────────────────────────────────────── */
         hudTimer.current += dt;
         if (hudTimer.current > 0.1 && onHud) {
             hudTimer.current = 0;
             onHud({
                 speed: Math.round(speed.current),
-                altitude: Math.round(pos.current.y),
+                altitude: Math.round(pos.current.y - getHeight(pos.current.x, pos.current.z)),
                 x: Math.round(pos.current.x),
                 z: Math.round(pos.current.z),
                 heading: yaw.current,
                 pitch: pitch.current,
                 bank: bank.current,
+                grounded: isOnGround && speed.current < 2,
             });
         }
     });
