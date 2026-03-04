@@ -1,89 +1,55 @@
-# ✈ SkyPort — Multiplayer Dogfight Arena
+# SkyPort
 
-A 3D flying sandbox with multiplayer dogfight mode built with React, Three.js, and WebSockets.
+SkyPort is an in-browser 3D flight sandbox and multiplayer dogfight arena. Built entirely with web technologies, it allows players to explore an expansive 8000x8000 unit world or engage in fast-paced 8-player tactical combat directly within an internet browser.
+
+## Motivation & Origin
+
+This project was heavily inspired by the classic Ace Combat series. The goal was to recreate the feeling of arcade-style aerial combat—the speed, the tension of dogfighting, and the satisfaction of mastering flight mechanics—but making it instantly accessible through a web browser without any installations. The physics are intentionally tuned to balance realism with intuitive, engaging arcade gameplay, encouraging dramatic low-altitude maneuvers and high-speed pursuits.
+
+SkyPort was "vibe-coded" in collaboration with AI assistance, utilizing Google DeepMind's Antigravity and Anthropic's Claude to rapidly prototype, build, and refine the 3D environment, the multiplayer networking stack, and the flight physics.
+
+## Features
+
+- Massive Sandbox World: An 8000x8000 environment featuring two major cities, a highway system, a challenging river canyon, towering snow peaks, and five distinct landing zones.
+- Custom Flight Physics: Aerodynamics tailored for arcade dogfighting, including intuitive stall mechanics, stall wobbles, and responsive pitch/roll controls.
+- Multiplayer Arena: Persistent WebSocket-based multiplayer supporting up to 8 players simultaneously with auto-team assignment (Team A vs Team B).
+- Tactical Radar: A real-time, heading-up radar minimap that actively tracks the relative positions of teammates and hostile targets.
+- Zero-Rerender Architecture: Built for high-frame-rate performance using React refs, completely bypassing React's render cycle for physics and network interpolation.
+
+## Technology Stack
+
+The project relies on a modern web development stack optimized for 3D graphics and real-time networking:
+
+- Frontend UI: React 19, Vite 6
+- 3D Engine: Three.js (r183), React Three Fiber 9, Drei 10
+- Performance Tech: Heavy use of InstancedMesh (rendering 1000+ objects in under 10 draw calls) and O(1) spatial hashing for rapid collision detection.
+- Backend / Networking: Node.js WebSocket (ws) server with 20Hz state synchronization and exponential client-side lerping for smooth remote player movement.
+- Infrastructure: Configured for Docker and Docker Compose for instant, reproducible local environments.
 
 ## Quick Start
 
+The easiest way to run the entire stack (both the Vite frontend dev server and the Node.js WebSocket backend) is via Docker.
+
 ```bash
+# Build and start both the game and the multiplayer server
 docker compose up --build
 ```
 
-- **Game**: http://localhost:5173
-- **WS Server**: ws://localhost:3001
+- Game Client: http://localhost:5173
+- WebSocket Server: ws://localhost:3001
 
-## Game Modes
+To test multiplayer locally, open multiple tabs or multiple web browsers pointed to http://localhost:5173. To play with friends on your local network, find your local IP address (e.g., 192.168.1.50) and have them navigate to `http://192.168.1.50:5173`.
 
-### Solo Flight
-Click **SOLO FLIGHT** on the menu. Free-fly around the terrain, land at airports/airstrips. No networking.
-
-### Dogfight (Multiplayer)
-1. Start the server: `docker compose up --build`
-2. Open http://localhost:5173 in **multiple tabs/browsers**
-3. Enter a callsign and click **JOIN DOGFIGHT**
-4. Players are auto-assigned to Team A (Airport) or Team B (Airstrip)
-5. Max 8 players per server
-
-## Controls
+## Flight Controls
 
 | Key | Action |
 |-----|--------|
-| `W` | Pitch up (nose up) |
-| `S` | Pitch down (nose down) |
-| `A` | Roll left |
-| `D` | Roll right |
-| `↑` | Throttle up |
-| `↓` | Throttle down / brake (on ground) |
-| `Space` | Shoot (dogfight mode) |
+| W | Pitch down (dive) |
+| S | Pitch up (climb) |
+| A | Roll left |
+| D | Roll right |
+| Up Arrow | Throttle up |
+| Down Arrow | Throttle down / Ground brake |
+| Space | Shoot primary weapon (Multiplayer only) |
 
-## Rules
-
-- **Land only on runways** — airport or village airstrip
-- Landing elsewhere or hitting buildings = **crash** → respawn
-- HUD shows **RWY** when over a runway
-- Projectiles are **visible tracers** — hits cause knockback + visual flash
-- No health/death system yet — just visual hits
-
-## World
-
-- **Two cities** (main + eastern) with buildings, roads, and connecting highway
-- **Airport** (Team A spawn) with full terminal, hangars, control tower
-- **Airstrip** (Team B spawn) near eastern village
-- **5 village clusters**, 700 trees, boundary mountains, lake, clouds
-- **4400×4400** map with fog and sky dome
-
-## Architecture
-
-```
-Skyport/
-├─ server/
-│   ├─ server.js          # WebSocket game server (ws)
-│   ├─ package.json
-│   └─ Dockerfile
-├─ src/
-│   ├─ components/
-│   │   ├─ Plane.jsx       # Flight physics + network sync
-│   │   ├─ Terrain.jsx     # World (InstancedMesh for performance)
-│   │   ├─ CameraController.jsx
-│   │   ├─ RemotePlanes.jsx # Other players with lerp interpolation
-│   │   └─ Projectiles.jsx  # Bullet pool (InstancedMesh)
-│   ├─ hooks/
-│   │   └─ useNetwork.js   # WebSocket client (zero re-renders)
-│   ├─ scenes/
-│   │   ├─ MainScene.jsx   # Solo mode
-│   │   └─ DogfightScene.jsx # Multiplayer mode
-│   ├─ App.jsx             # Connection UI + mode switching
-│   └─ index.css
-├─ docker-compose.yml      # Both services
-└─ Dockerfile              # Client (Vite dev server)
-```
-
-## Performance
-
-- **InstancedMesh** for buildings, trees, clouds, villages (~8 draw calls vs ~3000+)
-- **Spatial hash collision** grid (50-unit cells) — O(1) building collision
-- **useRef-only physics** — no React state re-renders in the render loop
-- **20Hz network sync** with exponential lerp interpolation
-
-## Tech Stack
-
-React 19 · Three.js r183 · React Three Fiber 9 · Drei 10 · Vite 6 · WebSocket (ws) · Docker
+Flight Warning: Monitor your airspeed to avoid stalling. Aircraft can only land safely on designated runways (as indicated by the RWY HUD). Contact with any other terrain or structures will result in an immediate crash sequence and respawn.
