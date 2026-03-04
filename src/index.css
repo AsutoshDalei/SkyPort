@@ -513,6 +513,25 @@ canvas {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   RADAR MINIMAP
+   ══════════════════════════════════════════════════════════════ */
+#radar-map {
+  position: absolute;
+  bottom: 60px;
+  right: 14px;
+  z-index: 20;
+  pointer-events: none;
+  border: 2px solid rgba(0, 204, 68, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 80, 30, 0.4);
+}
+
+#radar-map canvas {
+  display: block;
+}
+
+/* ══════════════════════════════════════════════════════════════
    CONNECTION STATUS & MODE BADGE
    ══════════════════════════════════════════════════════════════ */
 #connection-status {

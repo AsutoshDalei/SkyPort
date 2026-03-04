@@ -97,17 +97,20 @@ function RemotePlane({ playerId, playerData }) {
     return (
         <group ref={groupRef}>
             <RemotePlaneMesh teamColor={teamColor} />
-            {/* Player name label */}
-            <Html position={[0, 4, 0]} center distanceFactor={80} style={{ pointerEvents: 'none' }}>
+            <Html position={[0, 4, 0]} center zIndexRange={[100, 0]}>
                 <div style={{
                     background: 'rgba(0,0,0,0.6)',
                     color: teamColor,
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontSize: '10px',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
                     fontFamily: 'Consolas, Monaco, monospace',
                     whiteSpace: 'nowrap',
-                    letterSpacing: '0.5px',
+                    letterSpacing: '1px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    pointerEvents: 'none',
+                    userSelect: 'none'
                 }}>
                     {playerData.name}
                 </div>

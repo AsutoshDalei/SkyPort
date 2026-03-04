@@ -51,7 +51,12 @@ export function isOnRunway(x, z) {
     for (const zone of LANDING_ZONES) {
         const dx = x - zone.cx, dz = z - zone.cz;
         const c = Math.cos(zone.rotation), s = Math.sin(zone.rotation);
-        if (Math.abs(dx * c - dz * s) < zone.halfLen && Math.abs(dx * s + dz * c) < zone.halfWid) return zone.label;
+        const along = Math.abs(dx * c - dz * s);
+        const across = Math.abs(dx * s + dz * c);
+        // Exact runway
+        if (along < zone.halfLen && across < zone.halfWid) return zone.label;
+        // Safe ground margin: 200 units beyond ends, 30 units wider on sides
+        if (along < zone.halfLen + 200 && across < zone.halfWid + 30) return 'Taxiway';
     }
     return null;
 }
@@ -61,18 +66,45 @@ function runwayFlatFactor(x, z) {
     for (const zone of LANDING_ZONES) {
         const dx = x - zone.cx, dz = z - zone.cz;
         const c = Math.cos(zone.rotation), s = Math.sin(zone.rotation);
-        const along = Math.abs(dx * c - dz * s);
+        const along = dx * c - dz * s;  // signed: positive = one end, negative = other
         const across = Math.abs(dx * s + dz * c);
-        // Inner zone: completely flat
-        if (along < zone.halfLen + 20 && across < zone.halfWid + 15) {
-            // Smooth falloff at edges
-            const edgeAlong = Math.max(0, along - zone.halfLen) / 20;
+        const absAlong = Math.abs(along);
+
+        // Inner runway zone: completely flat
+        if (absAlong < zone.halfLen + 20 && across < zone.halfWid + 15) {
+            const edgeAlong = Math.max(0, absAlong - zone.halfLen) / 20;
             const edgeAcross = Math.max(0, across - zone.halfWid) / 15;
             const edge = Math.max(edgeAlong, edgeAcross);
-            return edge * edge; // 0 at runway center, ramps to 1 at edge
+            return edge * edge;
+        }
+
+        // Approach corridor: flatten terrain ahead of each runway end
+        // Extends 400 units beyond runway ends, widens gradually
+        const approachLen = 400;
+        if (absAlong > zone.halfLen && absAlong < zone.halfLen + approachLen) {
+            const approachDist = absAlong - zone.halfLen;
+            const approachWidthAtDist = zone.halfWid + 10 + approachDist * 0.15; // Widens slightly
+            if (across < approachWidthAtDist) {
+                // Gradual flatten: strongest near runway, fades to normal
+                const t = approachDist / approachLen;
+                return t * t; // 0 near runway end, ramps to 1 at max distance
+            }
         }
     }
-    return 1; // Not near any runway
+    return 1;
+}
+
+// Check if point is on or near any runway (for excluding buildings/houses/trees)
+function isNearRunway(x, z, margin) {
+    for (const zone of LANDING_ZONES) {
+        const dx = x - zone.cx, dz = z - zone.cz;
+        const c = Math.cos(zone.rotation), s = Math.sin(zone.rotation);
+        const along = Math.abs(dx * c - dz * s);
+        const across = Math.abs(dx * s + dz * c);
+        // Check runway + approach corridor
+        if (along < zone.halfLen + 300 && across < zone.halfWid + margin) return true;
+    }
+    return false;
 }
 
 const _spawnX = -700 + 100 * Math.cos(0.15);
@@ -250,6 +282,8 @@ const ALL_BUILDINGS = (() => {
                 for (let i = 0; i < num; i++) {
                     const x = cx + (rng() - 0.5) * 50;
                     const z = cz + (rng() - 0.5) * 50;
+                    // Skip if on or near any runway
+                    if (isNearRunway(x, z, 30)) continue;
                     const w = 7 + rng() * 12, h = 15 + rng() * maxH, d = 7 + rng() * 12;
                     arr.push({ x, z, baseH: getHeight(x, z), w, h, d, color: pick(BODY_COLORS, rng) });
                 }
@@ -312,6 +346,8 @@ const ALL_HOUSES = (() => {
         if (Math.sqrt((x + 2800) ** 2 + (z - 2400) ** 2) < 350) continue;
         if (Math.sqrt((x - 2600) ** 2 + (z + 2200) ** 2) < 300) continue;
         if (Math.max(Math.abs(x), Math.abs(z)) > 3200) continue;
+        // Skip if on or near any runway
+        if (isNearRunway(x, z, 25)) continue;
         const bH = getHeight(x, z);
         if (bH > 80 || bH < -10) continue;
         const w = 4 + rng() * 4, h = 3 + rng() * 4, d = 4 + rng() * 4;
@@ -321,6 +357,7 @@ const ALL_HOUSES = (() => {
     for (const v of VILLAGE_DEFS) {
         for (let i = 0; i < v.count; i++) {
             const x = v.cx + (rng() - 0.5) * v.spread, z = v.cz + (rng() - 0.5) * v.spread;
+            if (isNearRunway(x, z, 25)) continue;
             const bH = getHeight(x, z);
             if (bH > 80 || bH < -10) continue;
             const w = 4 + rng() * 5, h = 3 + rng() * 5, d = 4 + rng() * 5;
@@ -345,6 +382,8 @@ const ALL_TREES = (() => {
         if (Math.sqrt((x - 2600) ** 2 + (z + 2200) ** 2) < 280) continue;
         if (Math.sqrt((x + 1800) ** 2 + (z + 1800) ** 2) < 160) continue;
         if (Math.max(Math.abs(x), Math.abs(z)) > 3400) continue;
+        // Skip if on or near any runway
+        if (isNearRunway(x, z, 20)) continue;
         const bH = getHeight(x, z);
         if (bH > 140 || bH < -15) continue; // Skip canyon floors and high peaks
         const type = rng() < 0.45 ? 'pine' : rng() < 0.7 ? 'oak' : 'bush';
@@ -589,7 +628,7 @@ function SkyDome() {
     }, []);
     const ref = useRef();
     useFrame(({ camera }) => { if (ref.current) ref.current.position.copy(camera.position); });
-    return (<mesh ref={ref} material={mat} renderOrder={-1}><sphereGeometry args={[10000, 32, 48]} /></mesh>);
+    return (<mesh ref={ref} material={mat} renderOrder={-1}><sphereGeometry args={[7500, 32, 48]} /></mesh>);
 }
 
 // ── Ground ────────────────────────────────────────────────────

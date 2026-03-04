@@ -9,17 +9,17 @@ const MIN_SPEED = 0;
 const MAX_SPEED = 200;
 const MAX_ALT = 800;
 const GROUND_CLEARANCE = 2;
-const STALL_SPEED = 30;       // Below this, plane loses lift
-const GRAVITY = 12;           // Gentle descent when stalled
-const AIR_DRAG = 4;           // Natural speed decay in air (units/s²)
+const STALL_SPEED = 35;       // Below this, plane loses lift
+const GRAVITY = 20;           // Descent when stalled — stronger pull
+const AIR_DRAG = 5;           // Natural speed decay in air (units/s²)
 const GROUND_FRICTION = 18;   // Speed decay on ground
 const GROUND_BRAKE = 35;      // Brake with S on ground
 
-const PITCH_RATE = 0.8;       // Vertical climb factor (was 1.8 — much slower now)
+const PITCH_RATE = 1.1;       // Vertical climb/dive factor — slightly faster
 const PITCH_RESPONSE = 3.5;   // How fast pitch angle changes (smoothing)
 const ROLL_RESPONSE = 4.0;    // How fast bank angle changes
 
-const ROLL_YAW_COUPLING = 0.4;
+const ROLL_YAW_COUPLING = 0.5;
 const MAX_BANK = 0.55;        // Max bank angle (~31°)
 const MAX_PITCH = 0.35;       // Max pitch angle (~20°)
 const THROTTLE_ACCEL = 30;    // Slower throttle response
@@ -114,11 +114,7 @@ function AirplaneMesh() {
                         <torusGeometry args={[0.35, 0.05, 6, 12]} />
                         <meshStandardMaterial color="#404850" metalness={0.6} roughness={0.3} />
                     </mesh>
-                    {/* Fan face */}
-                    <mesh position={[0, 0, -0.9]} rotation={[0, 0, 0]}>
-                        <circleGeometry args={[0.32, 8]} />
-                        <meshStandardMaterial color="#303840" metalness={0.4} roughness={0.5} />
-                    </mesh>
+                    {/* Fan face removed — caused visual glitch */}
                     {/* Pylon (connects engine to wing) */}
                     <mesh position={[0, 0.25, 0]}>
                         <boxGeometry args={[0.08, 0.4, 1.0]} />
@@ -289,7 +285,8 @@ export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
         const rollScale = isOnGround ? 0.25 : 1;
         bank.current += (rollInput * MAX_BANK * rollScale - bank.current) * ROLL_RESPONSE * dt;
 
-        const speedFactor = Math.max(0.5, speed.current / 80);
+        // At low speed, turning is still responsive (floor at 0.35 instead of 0.5)
+        const speedFactor = Math.max(0.35, speed.current / 80);
         yaw.current += bank.current * ROLL_YAW_COUPLING * speedFactor * dt;
 
         /* ── Forward movement ────────────────────────────────────── */
@@ -298,7 +295,7 @@ export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
 
         /* ── Altitude — gravity + lift + pitch ────────────────────── */
         if (!isOnGround) {
-            const CONST_GRAVITY = 8;
+            const CONST_GRAVITY = 12;
             pos.current.y -= CONST_GRAVITY * dt;
 
             const liftFactor = Math.min(1, speed.current / 80);
@@ -307,9 +304,12 @@ export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
             const climbRate = pitch.current * PITCH_RATE * speed.current * 0.006 * dt * 60;
             pos.current.y += climbRate;
 
+            // Stall: strong drop when slow
             if (speed.current < STALL_SPEED) {
                 const stallFactor = 1 - (speed.current / STALL_SPEED);
                 pos.current.y -= GRAVITY * stallFactor * stallFactor * dt;
+                // Also nose down when stalling
+                bank.current += (Math.random() - 0.5) * 0.02 * stallFactor;
             }
         }
 
