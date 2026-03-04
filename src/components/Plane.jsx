@@ -7,7 +7,7 @@ import { getHeight, isOnRunway, SPAWN_POINT, checkBuildingCollision } from './Te
 const DEFAULT_SPEED = 60;
 const MIN_SPEED = 0;
 const MAX_SPEED = 200;
-const MAX_ALT = 600;
+const MAX_ALT = 800;
 const GROUND_CLEARANCE = 2;
 const STALL_SPEED = 30;       // Below this, plane loses lift
 const GRAVITY = 12;           // Gentle descent when stalled
