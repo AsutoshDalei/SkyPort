@@ -167,31 +167,38 @@ function AirplaneMesh() {
 }
 
 /* ── Plane Component ─────────────────────────────────────────── */
-export default function Plane({ onHud, parentRef }) {
+export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
     const internalRef = useRef();
     const groupRef = parentRef || internalRef;
     const keys = useRef({});
 
+    // Use custom spawn point (multiplayer team) or default
+    const sp = spawnPoint || SPAWN_POINT;
+
     // Flight state — spawn on the runway surface
-    const spawnGroundY = getHeight(SPAWN_POINT.x, SPAWN_POINT.z) + GROUND_CLEARANCE;
-    const yaw = useRef(SPAWN_POINT.yaw);
+    const spawnGroundY = getHeight(sp.x, sp.z) + GROUND_CLEARANCE;
+    const yaw = useRef(sp.yaw);
     const pitch = useRef(0);
     const bank = useRef(0);
     const speed = useRef(0); // Start stationary on the runway
-    const pos = useRef(new THREE.Vector3(SPAWN_POINT.x, spawnGroundY, SPAWN_POINT.z));
+    const pos = useRef(new THREE.Vector3(sp.x, spawnGroundY, sp.z));
 
     // Crash state
     const crashed = useRef(false);
     const crashTimer = useRef(0);
     const CRASH_DURATION = 2.0;
 
+    // Network send throttle
+    const netTimer = useRef(0);
+    const NET_SEND_RATE = 0.05; // 20Hz
+
     function respawn() {
-        const groundY = getHeight(SPAWN_POINT.x, SPAWN_POINT.z) + GROUND_CLEARANCE;
-        pos.current.set(SPAWN_POINT.x, groundY, SPAWN_POINT.z);
-        yaw.current = SPAWN_POINT.yaw;
+        const groundY = getHeight(sp.x, sp.z) + GROUND_CLEARANCE;
+        pos.current.set(sp.x, groundY, sp.z);
+        yaw.current = sp.yaw;
         pitch.current = 0;
         bank.current = 0;
-        speed.current = 0; // Start stationary
+        speed.current = 0;
         crashed.current = false;
         crashTimer.current = 0;
     }
@@ -341,6 +348,32 @@ export default function Plane({ onHud, parentRef }) {
             groupRef.current.rotation.set(pitch.current, yaw.current, bank.current, 'YXZ');
         }
 
+        /* ── Knockback from hits (multiplayer) ────────────────── */
+        if (networkRef && networkRef.hitEvents.current.length > 0) {
+            const myId = networkRef.myId.current;
+            const now = performance.now();
+            for (const ev of networkRef.hitEvents.current) {
+                if (ev.targetId === myId && now - ev.time < 200) {
+                    // Apply knockback: random push + speed loss
+                    pos.current.y += 5;
+                    speed.current = Math.max(0, speed.current - 15);
+                    bank.current += (Math.random() - 0.5) * 0.3;
+                }
+            }
+        }
+
+        /* ── Network state send (20Hz) ────────────────────────── */
+        if (networkRef) {
+            netTimer.current += dt;
+            if (netTimer.current >= NET_SEND_RATE) {
+                netTimer.current = 0;
+                networkRef.sendState(
+                    pos.current.x, pos.current.y, pos.current.z,
+                    yaw.current, pitch.current, bank.current, speed.current
+                );
+            }
+        }
+
         /* ── HUD ─────────────────────────────────────────────────── */
         hudTimer.current += dt;
         if (hudTimer.current > 0.1 && onHud) {
@@ -362,7 +395,7 @@ export default function Plane({ onHud, parentRef }) {
     });
 
     return (
-        <group ref={groupRef} position={[SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z]}>
+        <group ref={groupRef} position={[sp.x, spawnGroundY, sp.z]}>
             <AirplaneMesh />
             <pointLight color="#ffffff" intensity={2} distance={30} position={[0, 1, -3]} />
             <pointLight color="#ff0000" intensity={1} distance={15} position={[-5, 0, 0]} />

@@ -287,6 +287,269 @@ canvas {
   border: 1px solid rgba(100, 180, 100, 0.25);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   CONNECTION SCREEN
+   ══════════════════════════════════════════════════════════════ */
+#connect-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0a0e1a 0%, #1a2844 50%, #0f1528 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.cs-panel {
+  background: rgba(15, 20, 30, 0.9);
+  border: 1px solid rgba(136, 192, 208, 0.2);
+  border-radius: 8px;
+  padding: 40px;
+  min-width: 320px;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.cs-title {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 28px;
+  color: #88c0d0;
+  letter-spacing: 6px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.cs-icon {
+  font-size: 24px;
+}
+
+.cs-subtitle {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  color: rgba(235, 203, 139, 0.7);
+  letter-spacing: 4px;
+  margin-bottom: 30px;
+}
+
+.cs-input {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #e0e8f0;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.cs-input:focus {
+  border-color: #88c0d0;
+}
+
+.cs-input-sm {
+  font-size: 11px;
+  color: rgba(200, 210, 220, 0.5);
+}
+
+.cs-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cs-btn-primary {
+  background: rgba(136, 192, 208, 0.2);
+  color: #88c0d0;
+  border: 1px solid rgba(136, 192, 208, 0.3);
+}
+
+.cs-btn-primary:hover {
+  background: rgba(136, 192, 208, 0.35);
+}
+
+.cs-btn-secondary {
+  background: transparent;
+  color: rgba(200, 210, 220, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cs-btn-secondary:hover {
+  color: #e0e8f0;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PLAYER LIST
+   ══════════════════════════════════════════════════════════════ */
+#player-list {
+  position: absolute;
+  top: 40px;
+  left: 14px;
+  background: rgba(8, 10, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 6px 0;
+  z-index: 20;
+  pointer-events: none;
+  min-width: 130px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.pl-header {
+  font-size: 8px;
+  color: rgba(150, 160, 170, 0.5);
+  letter-spacing: 2px;
+  padding: 2px 10px 4px;
+}
+
+.pl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 10px;
+  color: rgba(220, 230, 240, 0.7);
+}
+
+.pl-me {
+  color: #ebcb8b;
+}
+
+.pl-team {
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+}
+
+.team-A {
+  background: rgba(68, 136, 255, 0.2);
+  color: #4488ff;
+}
+
+.team-B {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+}
+
+.pl-name {
+  flex: 1;
+}
+
+.pl-you {
+  font-size: 7px;
+  color: #ebcb8b;
+  letter-spacing: 1px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HIT TOASTS
+   ══════════════════════════════════════════════════════════════ */
+#hit-toasts {
+  position: absolute;
+  bottom: 60px;
+  right: 14px;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.hit-toast {
+  background: rgba(200, 60, 40, 0.25);
+  border: 1px solid rgba(255, 80, 60, 0.3);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+  color: #ff8060;
+  letter-spacing: 0.5px;
+  animation: toast-in 0.3s ease-out;
+}
+
+.ht-by {
+  color: #ff4444;
+  font-weight: bold;
+}
+
+.ht-arrow {
+  margin: 0 4px;
+  opacity: 0.5;
+}
+
+.ht-target {
+  color: #ebcb8b;
+  font-weight: bold;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONNECTION STATUS & MODE BADGE
+   ══════════════════════════════════════════════════════════════ */
+#connection-status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: #ff8060;
+  letter-spacing: 2px;
+  animation: pulse-status 1s ease-in-out infinite alternate;
+  z-index: 30;
+  pointer-events: none;
+}
+
+@keyframes pulse-status {
+  from {
+    opacity: 0.4;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.tm-mode {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 8px;
+  color: #ff4444;
+  letter-spacing: 2px;
+  margin-left: 8px;
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 2px;
+}
+
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .att-cell {
@@ -307,5 +570,14 @@ canvas {
 
   .crash-text {
     font-size: 36px;
+  }
+
+  #player-list {
+    display: none;
+  }
+
+  .cs-panel {
+    padding: 24px;
+    min-width: 280px;
   }
 }

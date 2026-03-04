@@ -10,3 +10,10 @@ services:
       - ./vite.config.js:/app/vite.config.js
     environment:
       - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - server
+
+  server:
+    build: ./server
+    ports:
+      - "3001:3001"

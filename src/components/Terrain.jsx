@@ -56,6 +56,24 @@ const _spawnX = -700 + 100 * Math.cos(0.15);
 const _spawnZ = -300 - 100 * Math.sin(0.15);
 export const SPAWN_POINT = { x: _spawnX, y: 0, z: _spawnZ, yaw: Math.PI / 2 + 0.15, needsGroundSnap: true };
 
+/* ── Team spawns for dogfight mode ──────────────────────────── */
+// Team A: Airport runway (-700, -300) rotation 0.15 — 4 positions staggered along runway
+// Team B: Airstrip runway (600, 500) rotation -0.3 — 4 positions staggered along runway
+const airportYaw = Math.PI / 2 + 0.15;
+const airstripYaw = Math.PI / 2 + (-0.3);
+export const TEAM_SPAWNS = {
+    A: [0, 1, 2, 3].map(i => ({
+        x: -700 + (60 + i * 30) * Math.cos(0.15),
+        y: 0, z: -300 - (60 + i * 30) * Math.sin(0.15),
+        yaw: airportYaw, needsGroundSnap: true,
+    })),
+    B: [0, 1, 2, 3].map(i => ({
+        x: 600 + (40 + i * 25) * Math.cos(-0.3),
+        y: 0, z: 500 - (40 + i * 25) * Math.sin(-0.3),
+        yaw: airstripYaw, needsGroundSnap: true,
+    })),
+};
+
 /* ══════════════════════════════════════════════════════════════
    FLAT ZONES & HEIGHT — expanded world
    ══════════════════════════════════════════════════════════════ */
