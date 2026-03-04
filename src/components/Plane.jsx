@@ -1,13 +1,13 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { getHeight, isOnRunway, SPAWN_POINT } from './Terrain.jsx';
+import { getHeight, isOnRunway, SPAWN_POINT, checkBuildingCollision } from './Terrain.jsx';
 
 /* ── Constants ───────────────────────────────────────────────── */
 const DEFAULT_SPEED = 60;
 const MIN_SPEED = 0;
 const MAX_SPEED = 200;
-const MAX_ALT = 450;
+const MAX_ALT = 600;
 const GROUND_CLEARANCE = 2;
 const STALL_SPEED = 30;       // Below this, plane loses lift
 const GRAVITY = 12;           // Gentle descent when stalled
@@ -327,29 +327,12 @@ export default function Plane({ onHud, parentRef }) {
         // Clamp max altitude
         pos.current.y = Math.min(MAX_ALT, pos.current.y);
 
-        /* ── Building collision ───────────────────────────────────── */
-        // Simple check: if in city area and below building height
-        const cityDist = Math.sqrt(pos.current.x ** 2 + pos.current.z ** 2);
-        if (cityDist < 350 && pos.current.y < 60) {
-            // Near city center and low altitude — check building collision
-            const bx = Math.round(pos.current.x / 70);
-            const bz = Math.round(pos.current.z / 70);
-            const blockDist = Math.sqrt(bx * bx + bz * bz);
-            if (blockDist < 5) {
-                // Approximate: in a city block, with some height remaining
-                const localX = Math.abs(pos.current.x - bx * 70);
-                const localZ = Math.abs(pos.current.z - bz * 70);
-                if (localX < 20 && localZ < 20) {
-                    // Likely hitting a building
-                    const buildingH = blockDist < 2 ? 80 : blockDist < 3 ? 50 : 30;
-                    if (pos.current.y < buildingH) {
-                        crashed.current = true;
-                        crashTimer.current = 0;
-                        speed.current = 0;
-                        return;
-                    }
-                }
-            }
+        /* ── Building collision (spatial hash) ────────────────────── */
+        if (checkBuildingCollision(pos.current.x, pos.current.y, pos.current.z)) {
+            crashed.current = true;
+            crashTimer.current = 0;
+            speed.current = 0;
+            return;
         }
 
         /* ── Apply to mesh ─────────────────────────────────────── */
