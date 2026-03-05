@@ -5,7 +5,7 @@ import { useRef, useEffect, useCallback } from 'react';
    All state in useRef to avoid React re-renders.
    ══════════════════════════════════════════════════════════════ */
 
-export default function useNetwork(serverUrl = 'ws://localhost:3001') {
+export default function useNetwork() {
     const ws = useRef(null);
     const myId = useRef(null);
     const myTeam = useRef(null);
@@ -17,6 +17,7 @@ export default function useNetwork(serverUrl = 'ws://localhost:3001') {
     const remoteShots = useRef([]); // [{ playerId, ox,oy,oz, dx,dy,dz, time }]
     const joinedRef = useRef(false);
     const nameRef = useRef('');
+    const urlRef = useRef('');
     const reconnectTimer = useRef(null);
 
     // Callbacks for UI state updates (called from React)
@@ -24,11 +25,12 @@ export default function useNetwork(serverUrl = 'ws://localhost:3001') {
     const onPlayerListChange = useRef(null);
     const onHitEvent = useRef(null);
 
-    const connect = useCallback((playerName) => {
+    const connect = useCallback((playerName, serverUrl) => {
         if (ws.current && ws.current.readyState <= 1) return; // already connected/connecting
         nameRef.current = playerName;
+        if (serverUrl) urlRef.current = serverUrl;
 
-        const socket = new WebSocket(serverUrl);
+        const socket = new WebSocket(urlRef.current);
         ws.current = socket;
 
         socket.onopen = () => {
@@ -123,12 +125,12 @@ export default function useNetwork(serverUrl = 'ws://localhost:3001') {
             if (onConnectChange.current) onConnectChange.current(false);
             // Auto-reconnect after 2s
             reconnectTimer.current = setTimeout(() => {
-                if (nameRef.current) connect(nameRef.current);
+                if (nameRef.current) connect(nameRef.current, urlRef.current);
             }, 2000);
         };
 
         socket.onerror = () => { /* onclose will fire */ };
-    }, [serverUrl]);
+    }, []);
 
     const disconnect = useCallback(() => {
         if (reconnectTimer.current) clearTimeout(reconnectTimer.current);

@@ -221,7 +221,7 @@ function RadarMap({ hudData, networkRef }) {
    ══════════════════════════════════════════════════════════════ */
 function ConnectScreen({ onSolo, onConnect }) {
     const [name, setName] = useState('');
-    const [server, setServer] = useState('ws://localhost:3001');
+    const [server, setServer] = useState(`ws://${window.location.hostname}:3001`);
 
     return (
         <div id="connect-screen">
@@ -298,7 +298,7 @@ export default function App() {
     const handleConnect = useCallback((name, serverUrl) => {
         // Override network URL if different
         const net = networkRef;
-        net.connect(name);
+        net.connect(name, serverUrl);
 
         // Wait for welcome to get team + spawn
         const checkInterval = setInterval(() => {
