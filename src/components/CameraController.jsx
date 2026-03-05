@@ -14,6 +14,7 @@ const _fwd = new THREE.Vector3();
  *
  * Third-person camera that follows a target group (the plane).
  * Uses smooth lerp interpolation for natural, cinematic feel.
+ * Distance and height react to plane speed — closer when fast.
  *
  * Props:
  *   targetRef  – React ref to the plane's <group>
@@ -25,6 +26,7 @@ export default function CameraController({ targetRef }) {
     const camPos = useRef(new THREE.Vector3(0, 130, 350));
     const camLook = useRef(new THREE.Vector3(0, 100, 300));
     const initialized = useRef(false);
+    const smoothSpeed = useRef(0);
 
     useFrame((_, delta) => {
         if (!targetRef.current) return;
@@ -37,9 +39,15 @@ export default function CameraController({ targetRef }) {
         // Extract yaw from the plane's YXZ euler rotation
         const yaw = planeRot.y;
 
-        // Camera sits behind and above the plane
-        const camDist = 40;
-        const camHeight = 18;
+        // Read speed from plane userData (set by Plane.jsx)
+        const rawSpeed = target.userData.speed || 0;
+        // Smooth the speed value to avoid camera jitter
+        smoothSpeed.current += (rawSpeed - smoothSpeed.current) * 2.0 * dt;
+
+        // Speed-reactive camera: closer at all speeds vs old fixed 40/18
+        const speedT = Math.min(1, smoothSpeed.current / 200);
+        const camDist = 25 + speedT * 10;   // 25 at rest → 35 at max
+        const camHeight = 10 + speedT * 6;  // 10 at rest → 16 at max
 
         _camOffset.set(0, camHeight, camDist);
         _camOffset.applyAxisAngle(_yAxis, yaw);

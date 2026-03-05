@@ -17,7 +17,7 @@ export default function MainScene({ onHud }) {
     return (
         <Canvas
             shadows
-            camera={{ fov: 65, near: 1, far: 8000, position: [0, 130, 350] }}
+            camera={{ fov: 65, near: 1, far: 16000, position: [0, 130, 350] }}
             gl={{ antialias: true, toneMapping: 2 /* ACESFilmicToneMapping */ }}
             style={{ width: '100%', height: '100%' }}
         >

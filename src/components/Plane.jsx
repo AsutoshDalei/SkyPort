@@ -346,6 +346,7 @@ export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
         if (groupRef.current) {
             groupRef.current.position.copy(pos.current);
             groupRef.current.rotation.set(pitch.current, yaw.current, bank.current, 'YXZ');
+            groupRef.current.userData.speed = speed.current;
         }
 
         /* ── Knockback from hits (multiplayer) ────────────────── */

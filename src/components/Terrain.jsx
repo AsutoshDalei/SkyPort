@@ -46,6 +46,10 @@ export const LANDING_ZONES = [
     { cx: 2600, cz: -2200, halfLen: 80, halfWid: 10, rotation: 0.1, label: 'Mesa Strip' },
     { cx: -2800, cz: 2400, halfLen: 100, halfWid: 14, rotation: -0.2, label: 'Harbor Runway' },
     { cx: -1800, cz: -1800, halfLen: 70, halfWid: 9, rotation: 0.4, label: 'Mountain Strip' },
+    { cx: 0, cz: -7500, halfLen: 110, halfWid: 14, rotation: 0.0, label: 'Coastal Airport' },
+    { cx: 6500, cz: 500, halfLen: 75, halfWid: 10, rotation: 0.2, label: 'Volcano Strip' },
+    { cx: -6000, cz: -5000, halfLen: 80, halfWid: 10, rotation: -0.15, label: 'Mesa Overlook' },
+    { cx: 0, cz: 7000, halfLen: 85, halfWid: 11, rotation: 0.1, label: 'Northern Outpost' },
 ];
 export function isOnRunway(x, z) {
     for (const zone of LANDING_ZONES) {
@@ -134,10 +138,15 @@ const FLAT_ZONES = [
     { x: 0, z: 0, r: 420 },
     { x: -700, z: -300, r: 300 },
     { x: 600, z: 500, r: 220 },
-    { x: 800, z: -600, r: 280 },       // Second city
-    { x: -2800, z: 2400, r: 350 },     // Harbor City
-    { x: 2600, z: -2200, r: 300 },     // Mesa Town
-    { x: -1800, z: -1800, r: 180 },    // Mountain Strip
+    { x: 800, z: -600, r: 280 },
+    { x: -2800, z: 2400, r: 350 },
+    { x: 2600, z: -2200, r: 300 },
+    { x: -1800, z: -1800, r: 180 },
+    { x: 0, z: -7500, r: 380 },        // Coastal City
+    { x: 6500, z: 500, r: 200 },       // Volcano Base
+    { x: -6000, z: -5000, r: 250 },    // Mesa Overlook
+    { x: -5000, z: 2500, r: 280 },     // Valley Town
+    { x: 0, z: 7000, r: 220 },         // Northern Outpost
 ];
 
 function flatZoneFactor(x, z) {
@@ -149,14 +158,27 @@ function flatZoneFactor(x, z) {
     return f;
 }
 
-const MAP_HALF = 4000;
-const BOUNDARY_START = 3200;
+const MAP_HALF = 10000;
+const BOUNDARY_START = 8500;
 
-/* ── Hills — NW quadrant snow-capped peaks ─────────────────── */
+/* ── Hills — spread across the expanded world ─────────────── */
 const HILL_DEFS = [
+    // Original NW peaks
     { cx: -1600, cz: -1200, peak: 200, radius: 500 },
     { cx: -2100, cz: -1500, peak: 180, radius: 420 },
     { cx: -1300, cz: -1650, peak: 160, radius: 360 },
+    // Northern highlands
+    { cx: -3500, cz: 4500, peak: 170, radius: 450 },
+    { cx: -4200, cz: 5000, peak: 150, radius: 380 },
+    // Eastern rolling hills
+    { cx: 3500, cz: -500, peak: 90, radius: 600 },
+    { cx: 4200, cz: 400, peak: 75, radius: 500 },
+    { cx: 4800, cz: -800, peak: 100, radius: 550 },
+    // Southern hills near coast
+    { cx: -2000, cz: -6000, peak: 110, radius: 400 },
+    { cx: 2500, cz: -5500, peak: 95, radius: 450 },
+    // Central-north
+    { cx: 1500, cz: 4000, peak: 120, radius: 500 },
 ];
 
 function hillHeight(x, z) {
@@ -227,6 +249,105 @@ function canyonCarve(x, z) {
     return carve * endTaper;
 }
 
+/* ── Volcano — Far east (7500, 0), steep 350m peak ─────────── */
+function volcanoHeight(x, z) {
+    const vx = 7500, vz = 0, radius = 700, peak = 350;
+    const d = Math.sqrt((x - vx) ** 2 + (z - vz) ** 2);
+    if (d > radius) return 0;
+    const t = 1 - d / radius;
+    // Steep conical shape with crater dip at top
+    const cone = t * t * peak;
+    const crater = t > 0.85 ? -(t - 0.85) / 0.15 * 40 : 0;
+    const detail = noise(x * 0.01 + 50, z * 0.01 + 50) * 20 * t;
+    return cone + crater + detail;
+}
+
+/* ── Mesa Plateau — SW (-6000, -5000), flat top at 150m ────── */
+function mesaHeight(x, z) {
+    const mx = -6000, mz = -5000, radius = 600, height = 150;
+    const d = Math.sqrt((x - mx) ** 2 + (z - mz) ** 2);
+    if (d > radius + 80) return 0;
+    if (d > radius) {
+        const outerT = (d - radius) / 80;
+        return height * (1 - outerT) * (1 - outerT) * 0.3;
+    }
+    const edgeT = Math.min(1, (radius - d) / 60);
+    // Steep cliff edges, flat top
+    const cliff = edgeT < 1 ? edgeT * edgeT * edgeT : 1;
+    return height * cliff + noise(x * 0.005 + 20, z * 0.005 + 20) * 5 * cliff;
+}
+
+/* ── Beach Coastline — South edge (z < -7000) ─────────────── */
+function beachSlope(x, z) {
+    if (z > -6500) return 0;
+    // Gentle slope down toward z = -9000
+    const t = Math.min(1, (-z - 6500) / 2500);
+    const wavyEdge = noise(x * 0.002, 0.1) * 300;
+    const adjustedT = Math.min(1, (-z - 6500 + wavyEdge) / 2500);
+    if (adjustedT <= 0) return 0;
+    return -adjustedT * adjustedT * 30; // slopes down to -30
+}
+
+/* ── River Valley — West, running N-S from (-5000,0) to (-5000,5000) */
+function riverCarve(x, z) {
+    if (z < -500 || z > 5500 || x < -5800 || x > -4200) return 0;
+    // Centerline with gentle curves
+    const centerX = -5000 + Math.sin(z * 0.002) * 200 + Math.sin(z * 0.005) * 80;
+    const dist = Math.abs(x - centerX);
+    const width = 120 + noise(z * 0.003, 3.0) * 30;
+    const depth = 45;
+    const endTaper = Math.min(1, (z + 500) / 800, (5500 - z) / 800);
+    if (dist > width + 30) return 0;
+    let carve;
+    if (dist < width * 0.4) {
+        carve = -depth;
+    } else if (dist < width) {
+        const wallT = (dist - width * 0.4) / (width * 0.6);
+        carve = -depth * (1 - wallT * wallT);
+    } else {
+        const outerT = (dist - width) / 30;
+        carve = -depth * (1 - outerT) * (1 - outerT) * 0.2;
+    }
+    return carve * endTaper;
+}
+
+/* ── Deep NE Canyon — (4000,4000) to (8000,8000), 300m deep ── */
+function neCanyonCenterline(t) {
+    const sx = 4000 + t * 4000;
+    const sz = 4000 + t * 4000;
+    const curve1 = Math.sin(t * Math.PI * 3.0) * 250;
+    const curve2 = Math.sin(t * Math.PI * 5.0 + 0.8) * 100;
+    const perpScale = (curve1 + curve2) * 0.7071;
+    return { x: sx - perpScale, z: sz + perpScale };
+}
+
+function neCanyonCarve(x, z) {
+    let minDist = Infinity;
+    let bestT = 0;
+    for (let i = 0; i <= 200; i++) {
+        const t = i / 200;
+        const c = neCanyonCenterline(t);
+        const d = (x - c.x) ** 2 + (z - c.z) ** 2;
+        if (d < minDist) { minDist = d; bestT = t; }
+    }
+    const perp = Math.sqrt(minDist);
+    const baseWidth = 70 + 30 * Math.sin(bestT * Math.PI * 4) + noise(bestT * 3000 * 0.004, 2.5) * 20;
+    const depth = 300 + noise(bestT * 3000 * 0.003, 3.0) * 60;
+    const endTaper = Math.min(1, bestT * 6, (1 - bestT) * 6);
+    if (perp > baseWidth + 50) return 0;
+    let carve;
+    if (perp < baseWidth * 0.4) {
+        carve = -depth;
+    } else if (perp < baseWidth) {
+        const wallT = (perp - baseWidth * 0.4) / (baseWidth * 0.6);
+        carve = -depth * (1 - wallT * wallT);
+    } else {
+        const outerT = (perp - baseWidth) / 50;
+        carve = -depth * (1 - outerT) * (1 - outerT) * 0.25;
+    }
+    return carve * endTaper;
+}
+
 export function getHeight(x, z) {
     // Base terrain noise
     let h = noise(x * 0.0015, z * 0.0015) * 50
@@ -241,8 +362,23 @@ export function getHeight(x, z) {
     // Add hills
     h += hillHeight(x, z);
 
-    // Add canyon carving
+    // Add canyon carving (SE)
     h += canyonCarve(x, z);
+
+    // Add NE deep canyon
+    h += neCanyonCarve(x, z);
+
+    // Add volcano
+    h += volcanoHeight(x, z);
+
+    // Add mesa plateau
+    h += mesaHeight(x, z);
+
+    // Add beach slope
+    h += beachSlope(x, z);
+
+    // Add river valley
+    h += riverCarve(x, z);
 
     // Boundary walls
     const edge = Math.max(Math.abs(x), Math.abs(z));
@@ -268,6 +404,8 @@ const CITY_DEFS = [
     { cx: 800, cz: -600, grid: 2 },
     { cx: -2800, cz: 2400, grid: 3 },   // Harbor City
     { cx: 2600, cz: -2200, grid: 2 },   // Mesa Town
+    { cx: 0, cz: -7500, grid: 3 },      // Coastal City
+    { cx: -5000, cz: 2500, grid: 2 },   // Valley Town
 ];
 const ALL_BUILDINGS = (() => {
     const rng = seededRandom(123);
@@ -321,7 +459,7 @@ const VILLAGE_DEFS = [
     { cx: -400, cz: -600, count: 6, spread: 60 },
     { cx: 800, cz: 0, count: 7, spread: 70 },
     { cx: 1000, cz: -800, count: 6, spread: 65 },
-    // New villages near new cities
+    // Near existing new cities
     { cx: -2600, cz: 2100, count: 10, spread: 100 },
     { cx: -3000, cz: 2600, count: 8, spread: 85 },
     { cx: 2400, cz: -2000, count: 8, spread: 80 },
@@ -331,6 +469,20 @@ const VILLAGE_DEFS = [
     { cx: 1500, cz: -1000, count: 6, spread: 60 },
     { cx: 0, cz: 1800, count: 5, spread: 50 },
     { cx: 0, cz: -1800, count: 4, spread: 50 },
+    // New villages for expanded map
+    { cx: 6500, cz: 500, count: 10, spread: 120 },    // Volcano Base
+    { cx: 6200, cz: -200, count: 6, spread: 70 },
+    { cx: 5000, cz: 0, count: 8, spread: 90 },        // Eastern Plains
+    { cx: 5200, cz: 600, count: 6, spread: 75 },
+    { cx: 0, cz: 7000, count: 10, spread: 110 },      // Northern Outpost
+    { cx: -500, cz: 6800, count: 7, spread: 80 },
+    { cx: 200, cz: -7200, count: 8, spread: 90 },     // Near Coastal City
+    { cx: -400, cz: -7800, count: 6, spread: 70 },
+    { cx: -5200, cz: 2200, count: 7, spread: 80 },    // Near Valley Town
+    { cx: -4800, cz: 2800, count: 6, spread: 70 },
+    { cx: -5800, cz: -4700, count: 5, spread: 60 },   // Near Mesa Overlook
+    { cx: -3500, cz: -3000, count: 5, spread: 55 },   // Remote midlands
+    { cx: 3000, cz: 3000, count: 6, spread: 65 },
 ];
 const HOUSE_COLORS = ['#c8b8a0', '#b8a888', '#a89878', '#d0c0a8', '#e0d0b8'];
 const ROOF_COLORS = ['#8a4030', '#6a5040', '#905838', '#7a6050'];
@@ -339,13 +491,13 @@ const ALL_HOUSES = (() => {
     const rng = seededRandom(789);
     const arr = [];
     // Scattered individual homes
-    for (let i = 0; i < 100; i++) {
-        const x = (rng() - 0.5) * 7000, z = (rng() - 0.5) * 7000;
+    for (let i = 0; i < 200; i++) {
+        const x = (rng() - 0.5) * 18000, z = (rng() - 0.5) * 18000;
         if (Math.sqrt(x * x + z * z) < 400) continue;
         if (Math.sqrt((x - 800) ** 2 + (z + 600) ** 2) < 300) continue;
         if (Math.sqrt((x + 2800) ** 2 + (z - 2400) ** 2) < 350) continue;
         if (Math.sqrt((x - 2600) ** 2 + (z + 2200) ** 2) < 300) continue;
-        if (Math.max(Math.abs(x), Math.abs(z)) > 3200) continue;
+        if (Math.max(Math.abs(x), Math.abs(z)) > 8500) continue;
         // Skip if on or near any runway
         if (isNearRunway(x, z, 25)) continue;
         const bH = getHeight(x, z);
@@ -371,8 +523,8 @@ const ALL_HOUSES = (() => {
 const ALL_TREES = (() => {
     const rng = seededRandom(456);
     const trunks = [], cones = [], spheres = [];
-    for (let i = 0; i < 1200; i++) {
-        const x = (rng() - 0.5) * 7000, z = (rng() - 0.5) * 7000;
+    for (let i = 0; i < 2500; i++) {
+        const x = (rng() - 0.5) * 18000, z = (rng() - 0.5) * 18000;
         // Exclude flat zones (cities, airports)
         if (Math.sqrt(x * x + z * z) < 320) continue;
         if (Math.sqrt((x + 700) ** 2 + (z + 300) ** 2) < 280) continue;
@@ -381,7 +533,7 @@ const ALL_TREES = (() => {
         if (Math.sqrt((x + 2800) ** 2 + (z - 2400) ** 2) < 330) continue;
         if (Math.sqrt((x - 2600) ** 2 + (z + 2200) ** 2) < 280) continue;
         if (Math.sqrt((x + 1800) ** 2 + (z + 1800) ** 2) < 160) continue;
-        if (Math.max(Math.abs(x), Math.abs(z)) > 3400) continue;
+        if (Math.max(Math.abs(x), Math.abs(z)) > 8800) continue;
         // Skip if on or near any runway
         if (isNearRunway(x, z, 20)) continue;
         const bH = getHeight(x, z);
@@ -560,10 +712,10 @@ function InstancedClouds() {
     const ref = useRef();
     const cloudData = useMemo(() => {
         const rng = seededRandom(42);
-        return Array.from({ length: 140 }, () => ({
-            x: (rng() - 0.5) * 8000,
+        return Array.from({ length: 250 }, () => ({
+            x: (rng() - 0.5) * 20000,
             y: 220 + rng() * 280,
-            z: (rng() - 0.5) * 8000,
+            z: (rng() - 0.5) * 20000,
             sx: 40 + rng() * 80,
             sy: 5 + rng() * 8,
             sz: 25 + rng() * 50,
@@ -598,7 +750,7 @@ function InstancedClouds() {
     });
 
     return (
-        <instancedMesh ref={ref} args={[null, null, 140]} frustumCulled={false}>
+        <instancedMesh ref={ref} args={[null, null, 250]} frustumCulled={false}>
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial color="#e8e8f4" transparent opacity={0.4} roughness={1} />
         </instancedMesh>
@@ -628,13 +780,13 @@ function SkyDome() {
     }, []);
     const ref = useRef();
     useFrame(({ camera }) => { if (ref.current) ref.current.position.copy(camera.position); });
-    return (<mesh ref={ref} material={mat} renderOrder={-1}><sphereGeometry args={[7500, 32, 48]} /></mesh>);
+    return (<mesh ref={ref} material={mat} renderOrder={-1}><sphereGeometry args={[15000, 32, 48]} /></mesh>);
 }
 
 // ── Ground ────────────────────────────────────────────────────
 function Ground() {
     const geometry = useMemo(() => {
-        const size = 8000, seg = 450;
+        const size = 20000, seg = 600;
         const geo = new THREE.PlaneGeometry(size, size, seg, seg);
         geo.rotateX(-Math.PI / 2);
         const pos = geo.attributes.position;
@@ -643,6 +795,7 @@ function Ground() {
         const dirt = new THREE.Color('#7a6a4a'), rock = new THREE.Color('#8a8a80'), snow = new THREE.Color('#e0e0e8');
         const canyonWall = new THREE.Color('#7a5a38'), canyonFloor = new THREE.Color('#8a6a42');
         const canyonDeep = new THREE.Color('#5a3a22');
+        const sand = new THREE.Color('#d4c090'), volcanicRock = new THREE.Color('#3a2a20');
         const tmp = new THREE.Color();
         for (let i = 0; i < pos.count; i++) {
             const x = pos.getX(i), z = pos.getZ(i), h = getHeight(x, z);
@@ -652,6 +805,13 @@ function Ground() {
                 const cDepth = Math.min(1, (-h - 20) / 140);
                 if (cDepth > 0.5) tmp.lerpColors(canyonFloor, canyonDeep, (cDepth - 0.5) * 2);
                 else tmp.lerpColors(canyonWall, canyonFloor, cDepth * 2);
+            } else if (z < -7000 && h < 5) {
+                // Beach sand
+                tmp.copy(sand);
+            } else if (Math.sqrt((x - 7500) ** 2 + z * z) < 700 && h > 80) {
+                // Volcanic rock
+                const vt = Math.min(1, (h - 80) / 200);
+                tmp.lerpColors(dirt, volcanicRock, vt);
             } else if (h < 3) tmp.copy(gL);
             else if (h < 30) tmp.lerpColors(gL, gH, h / 30);
             else if (h < 60) tmp.lerpColors(gH, dirt, (h - 30) / 30);
@@ -702,6 +862,22 @@ function Roads() {
         arr.push({ pos: [-1400, 0.4, 1200], rot: Math.atan2(2400, -2800), len: 2200, w: 10 });
         // Highway from city 2 to Mesa Town (NE corner)
         arr.push({ pos: [1700, 0.4, -1400], rot: Math.atan2(-2200 + 600, 2600 - 800), len: 1400, w: 9 });
+        // Coastal City grid
+        for (let i = -3; i <= 3; i++) {
+            arr.push({ pos: [0, 0.4, -7500 + i * 70], rot: 0, len: 500, w: 8 });
+            arr.push({ pos: [i * 70, 0.4, -7500], rot: Math.PI / 2, len: 500, w: 8 });
+        }
+        // Valley Town grid
+        for (let i = -2; i <= 2; i++) {
+            arr.push({ pos: [-5000, 0.4, 2500 + i * 70], rot: 0, len: 380, w: 8 });
+            arr.push({ pos: [-5000 + i * 70, 0.4, 2500], rot: Math.PI / 2, len: 380, w: 8 });
+        }
+        // Highway downtown to Coastal City
+        arr.push({ pos: [0, 0.4, -3750], rot: Math.PI / 2, len: 7000, w: 10 });
+        // Highway to Valley Town
+        arr.push({ pos: [-2500, 0.4, 1250], rot: Math.atan2(2500, -5000), len: 3500, w: 9 });
+        // Highway to Northern Outpost
+        arr.push({ pos: [0, 0.4, 3500], rot: Math.PI / 2, len: 6500, w: 9 });
         return arr;
     }, []);
 
@@ -877,7 +1053,7 @@ export default function Terrain() {
                 shadow-camera-top={2500} shadow-camera-bottom={-2500} />
             <directionalLight color="#4060a0" intensity={0.3} position={[-200, 100, 200]} />
             <hemisphereLight skyColor="#6090c0" groundColor="#3a4a30" intensity={0.5} />
-            <fog attach="fog" args={['#8aaccc', 800, 7000]} />
+            <fog attach="fog" args={['#8aaccc', 800, 14000]} />
 
             <Ground />
             <Roads />
@@ -888,10 +1064,26 @@ export default function Terrain() {
             <CanyonRiver />
 
             <Airport position={[-700, 0, -300]} rotation={0.15} />
+            <Airport position={[0, 0, -7500]} rotation={0.0} />
             <Airstrip position={[600, 0, 500]} rotation={-0.3} />
             <Airstrip position={[2600, 0, -2200]} rotation={0.1} />
             <Airstrip position={[-2800, 0, 2400]} rotation={-0.2} />
             <Airstrip position={[-1800, 0, -1800]} rotation={0.4} />
+            <Airstrip position={[6500, 0, 500]} rotation={0.2} />
+            <Airstrip position={[-6000, 0, -5000]} rotation={-0.15} />
+            <Airstrip position={[0, 0, 7000]} rotation={0.1} />
+
+            {/* Ocean — southern coastline */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, -8500]} receiveShadow>
+                <planeGeometry args={[20000, 3000]} />
+                <meshStandardMaterial color="#1a4a7a" transparent opacity={0.65} roughness={0.15} metalness={0.4} />
+            </mesh>
+
+            {/* River water plane — western valley */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5000, -40, 2500]} receiveShadow>
+                <planeGeometry args={[100, 5500]} />
+                <meshStandardMaterial color="#1a5a8a" transparent opacity={0.6} roughness={0.15} metalness={0.4} />
+            </mesh>
         </group>
     );
 }
