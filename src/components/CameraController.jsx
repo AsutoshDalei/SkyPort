@@ -44,10 +44,10 @@ export default function CameraController({ targetRef }) {
         // Smooth the speed value to avoid camera jitter
         smoothSpeed.current += (rawSpeed - smoothSpeed.current) * 2.0 * dt;
 
-        // Speed-reactive camera: closer at all speeds vs old fixed 40/18
+        // Speed-reactive camera
         const speedT = Math.min(1, smoothSpeed.current / 200);
-        const camDist = 25 + speedT * 10;   // 25 at rest → 35 at max
-        const camHeight = 10 + speedT * 6;  // 10 at rest → 16 at max
+        const camDist = 18 - speedT * 3;   // 18 at rest → 15 at max
+        const camHeight = 8 - speedT * 2;  // 8 at rest → 6 at max
 
         _camOffset.set(0, camHeight, camDist);
         _camOffset.applyAxisAngle(_yAxis, yaw);
