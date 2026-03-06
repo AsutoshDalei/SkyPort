@@ -1,19 +1,9 @@
+version: '3.8'
 services:
-  skyport:
+  app:
     build: .
     ports:
       - "5173:5173"
     volumes:
-      - ./src:/app/src
-      - ./public:/app/public
-      - ./index.html:/app/index.html
-      - ./vite.config.js:/app/vite.config.js
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-    depends_on:
-      - server
-
-  server:
-    build: ./server
-    ports:
-      - "3001:3001"
+      - .:/app
+      - /app/node_modules

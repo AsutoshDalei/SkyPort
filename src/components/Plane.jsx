@@ -247,6 +247,14 @@ export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
         const groundH = getHeight(pos.current.x, pos.current.z) + GROUND_CLEARANCE;
         const isOnGround = pos.current.y <= groundH + 0.5;
 
+        /* ── Off-airport crash ───────────────────────────────────── */
+        if (isOnGround && !isOnRunway(pos.current.x, pos.current.z)) {
+            crashed.current = true;
+            crashTimer.current = 0;
+            speed.current = 0;
+            return;
+        }
+
         /* ── Throttle (Arrow Up / Down) ──────────────────────────── */
         if (k['ArrowUp']) {
             speed.current = Math.min(MAX_SPEED, speed.current + THROTTLE_ACCEL * dt);
@@ -335,7 +343,13 @@ export default function Plane({ onHud, parentRef, networkRef, spawnPoint }) {
         pos.current.y = Math.min(MAX_ALT, pos.current.y);
 
         /* ── Building collision (spatial hash) ────────────────────── */
-        if (checkBuildingCollision(pos.current.x, pos.current.y, pos.current.z)) {
+        const _euler = new THREE.Euler(pitch.current, yaw.current, bank.current, 'YXZ');
+        const _leftWing = new THREE.Vector3(-6, 0, 0).applyEuler(_euler).add(pos.current);
+        const _rightWing = new THREE.Vector3(6, 0, 0).applyEuler(_euler).add(pos.current);
+
+        if (checkBuildingCollision(pos.current.x, pos.current.y, pos.current.z) ||
+            checkBuildingCollision(_leftWing.x, _leftWing.y, _leftWing.z) ||
+            checkBuildingCollision(_rightWing.x, _rightWing.y, _rightWing.z)) {
             crashed.current = true;
             crashTimer.current = 0;
             speed.current = 0;
